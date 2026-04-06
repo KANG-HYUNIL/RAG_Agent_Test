@@ -1,0 +1,10 @@
+method: hybrid
+top_k: 5
+metric: "IP"  # (Inner Product, Cosine Similarity with L2 norm)
+normalize_query: true
+
+hybrid:
+  enabled: true
+  dense_top_k: 10
+  sparse_top_k: 10
+  fusion: rrf

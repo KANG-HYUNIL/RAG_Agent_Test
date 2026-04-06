@@ -1,0 +1,8 @@
+defaults:
+  - serialization: kv_pairs
+  - retrieval: top_k
+  - prompt: few_shot
+  - _self_
+
+experiment_name: "default_benchmark"
+output_dir: "./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}"

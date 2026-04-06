@@ -1,0 +1,3 @@
+name: "synthetic"
+method: "synthetic_query_expansion"
+description: "LLM을 활용해 해당 데이터가 답할 수 있는 예상 질문을 덧붙입니다. 전처리 시간이 소요됩니다."

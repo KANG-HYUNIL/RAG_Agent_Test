@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/Users/hik88/Desktop/BIT_Uni/Resume_지원기록/지원과제항목들\\(코테_과제등\\)/260404_AgentDeveloper인턴_과제전형/RAG_Agent/RAG_Agent_Test/src/agent/retriever\")",
+      "Bash(mkdir -p \"C:/Users/hik88/Desktop/BIT_Uni/Resume_지원기록/지원과제항목들\\(코테_과제등\\)/260404_AgentDeveloper인턴_과제전형/RAG_Agent/RAG_Agent_Test/src/agent/embedder\")",
+      "Bash(mkdir -p \"C:/Users/hik88/Desktop/BIT_Uni/Resume_지원기록/지원과제항목들\\(코테_과제등\\)/260404_AgentDeveloper인턴_과제전형/RAG_Agent/RAG_Agent_Test/src/agent/prompt_builder\")",
+      "Bash(rm:*)",
+      "Bash(uv run:*)"
+    ]
+  }
+}

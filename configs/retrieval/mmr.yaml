@@ -1,0 +1,9 @@
+method: mmr
+top_k: 5
+metric: "IP"  # (Inner Product, Cosine Similarity with L2 norm)
+normalize_query: true
+
+mmr:
+  enabled: true
+  fetch_k: 20
+  lambda_mult: 0.7

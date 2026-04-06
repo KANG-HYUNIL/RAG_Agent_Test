@@ -1,0 +1,3 @@
+name: "dual"
+method: "dual_representation"
+description: "KV Pair와 Narrative 두 가지 표현 방식을 모두 사용하여 색인합니다."

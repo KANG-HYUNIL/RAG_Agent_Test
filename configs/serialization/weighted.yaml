@@ -1,0 +1,3 @@
+name: "weighted"
+method: "field_weighted_kv"
+description: "질문(Question)과 영역(Category)에 가중치를 두어 먼저 배치하는 직렬화입니다."

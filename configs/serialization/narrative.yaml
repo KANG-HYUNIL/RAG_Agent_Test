@@ -1,0 +1,3 @@
+name: "narrative"
+method: "narrativized_lite"
+description: "데이터를 자연어 문장 형태로 풀어써서 직렬화합니다."

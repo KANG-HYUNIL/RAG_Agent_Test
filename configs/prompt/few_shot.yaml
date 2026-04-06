@@ -1,0 +1,4 @@
+name: "few_shot"
+num_examples: 3
+include_category: true
+description: "검색된 결과를 프롬프트에 N-shot 예제로 포맷팅하여 LLM에 전달합니다."

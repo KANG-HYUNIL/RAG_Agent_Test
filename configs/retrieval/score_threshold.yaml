@@ -1,0 +1,8 @@
+method: score_threshold
+top_k: 5
+metric: "IP"  # (Inner Product, Cosine Similarity with L2 norm)
+normalize_query: true
+
+score_threshold:
+  enabled: true
+  value: 0.5  # placeholder value
