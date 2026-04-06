@@ -9,9 +9,9 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.app.service.openai_service import OpenAIService
-from src.app.types.inference_dto import InferenceRequest, InferenceResponse
-from src.config.config import Settings, get_settings
+from app.service.openai_service import OpenAIService
+from app.types.inference_dto import InferenceRequest, InferenceResponse
+from config.config import Settings, get_settings
 
 
 def get_openai_service(
