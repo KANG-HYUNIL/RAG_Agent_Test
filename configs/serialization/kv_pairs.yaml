@@ -1,3 +1,4 @@
 name: "kv_pairs"
 method: "kv_pairs"
 description: "가장 단순한 키-값 구조로 직렬화합니다."
+exclude_fields: ["answer", "Human Accuracy"]

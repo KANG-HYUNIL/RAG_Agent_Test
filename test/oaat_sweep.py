@@ -3,14 +3,14 @@ oaat_sweep.py — One-At-A-Time (OAAT) Baseline + 단일 축 변경 실험 자�
 
 목적:
   - baseline 1회 실행
-  - 각 실험 축(serialization / retrieval / prompt)을 한 번에 하나씩 변경하여 실험
+  - 각 실험 축(serialization / retrieval / prompt / query_representation)을
+    한 번에 하나씩 변경하여 실험
   - 결과를 outputs/oaat_sweep/{timestamp}/ 에 요약 CSV + JSON 및 개별 실험 로그로 저장
 
 실행 방법 (프로젝트 루트에서):
-  python test/oaat_sweep.py                        # stage1_oaat (기본)
-  python test/oaat_sweep.py --mode baseline_only   # baseline만
-  python test/oaat_sweep.py --mode stage1_oaat     # baseline + 축별 1차 실험
-  python test/oaat_sweep.py --yes                  # 확인 프롬프트 스킵
+  python test/oaat_sweep.py                       # oaat (기본)
+  python test/oaat_sweep.py --mode baseline_only  # baseline만
+  python test/oaat_sweep.py --yes                 # 확인 프롬프트 스킵
 """
 
 import argparse
@@ -27,18 +27,30 @@ BASELINE: dict[str, str] = {
     "serialization": "kv_pairs",
     "retrieval": "top_k",
     "prompt": "raw_stuffing",
+    "query_representation": "question_only",
 }
 
-# ─── 축별 후보 (yaml 파일명 = Hydra group value) ──────────────
+# ─── 축별 후보 (yaml 파일명 = Hydra group value, baseline 제외) ──
 AXES: dict[str, list[str]] = {
-    "serialization": ["raw", "kv_pairs", "narrative", "weighted", "dual", "synthetic"],
-    "retrieval": ["top_k", "score_threshold", "mmr", "hybrid"],
+    "serialization": [
+        "raw",
+        "narrative",
+        "weighted",
+        "dual",
+        "kv_pairs_no_category",
+    ],
+    "retrieval": [
+        "score_threshold",
+        "mmr",
+        "top_k_category_filter",
+    ],
     "prompt": [
-        "raw_stuffing",
-        "compress_summarize",
-        "few_shot_envelope",
         "labeled_context",
         "structured_context",
+        "few_shot_envelope",
+    ],
+    "query_representation": [
+        "question_plus_choices",
     ],
 }
 
@@ -49,6 +61,7 @@ _FIELDS = [
     "serialization",
     "retrieval",
     "prompt",
+    "query_representation",
     "accuracy_pct",
     "correct",
     "total",
@@ -67,11 +80,9 @@ def build_run_list(mode: str) -> list[dict]:
     if mode == "baseline_only":
         return runs
 
-    # stage1_oaat: 각 축을 하나씩 바꾸고 나머지는 baseline 고정
+    # oaat: 각 축을 하나씩 바꾸고 나머지는 baseline 고정
     for axis, variants in AXES.items():
         for variant in variants:
-            if BASELINE[axis] == variant:
-                continue  # baseline과 동일 → 스킵
             cfg = {**BASELINE, axis: variant}
             runs.append(
                 {
@@ -96,6 +107,7 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
         f"serial-{run_cfg['serialization']}"
         f"__ret-{run_cfg['retrieval']}"
         f"__prompt-{run_cfg['prompt']}"
+        f"__qr-{run_cfg['query_representation']}"
     )
     run_dir = os.path.join(hydra_root, folder_name)
 
@@ -105,6 +117,7 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
         f"serialization={run_cfg['serialization']}",
         f"retrieval={run_cfg['retrieval']}",
         f"prompt={run_cfg['prompt']}",
+        f"query_representation={run_cfg['query_representation']}",
         f"experiment_name={name}",
         f"hydra.run.dir={run_dir}",
     ]
@@ -115,6 +128,7 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
         f"      serial={run_cfg['serialization']}"
         f"  retrieval={run_cfg['retrieval']}"
         f"  prompt={run_cfg['prompt']}"
+        f"  qr={run_cfg['query_representation']}"
     )
     print(f"{'─' * 60}")
 
@@ -124,6 +138,7 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
         "serialization": run_cfg["serialization"],
         "retrieval": run_cfg["retrieval"],
         "prompt": run_cfg["prompt"],
+        "query_representation": run_cfg["query_representation"],
         "accuracy_pct": None,
         "correct": None,
         "total": None,
@@ -180,7 +195,6 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
         else:
             print(f"[WARN] 결과 파싱 실패. status={result['status']}")
             if proc.returncode != 0:
-                # 마지막 500자만 출력
                 tail = combined[-500:].strip()
                 print(f"--- STDERR tail ---\n{tail}\n---")
 
@@ -193,25 +207,30 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
 
 def print_summary_table(results: list[dict]) -> None:
     """완료 후 콘솔 요약 테이블 출력."""
-    # 축 순서: baseline → serialization → retrieval → prompt
-    axis_order = {"baseline": 0, "serialization": 1, "retrieval": 2, "prompt": 3}
+    axis_order = {
+        "baseline": 0,
+        "serialization": 1,
+        "retrieval": 2,
+        "prompt": 3,
+        "query_representation": 4,
+    }
     sorted_results = sorted(
         results,
         key=lambda r: (axis_order.get(r["axis"], 99), -(r["accuracy_pct"] or -1)),
     )
 
-    header = f"{'축':<15} {'실험명':<35} {'정확도':>9} {'correct':>8} {'time(s)':>9}"
-    print(f"\n{'=' * 60}")
+    header = f"{'축':<20} {'실험명':<40} {'정확도':>9} {'correct':>8} {'time(s)':>9}"
+    print(f"\n{'=' * 80}")
     print("OAAT SWEEP 결과 요약")
-    print("=" * 60)
+    print("=" * 80)
     print(header)
-    print("─" * 60)
+    print("─" * 80)
     for r in sorted_results:
         acc = f"{r['accuracy_pct']:.2f}%" if r["accuracy_pct"] is not None else "N/A"
         correct = f"{r['correct']}/{r['total']}" if r["correct"] is not None else "N/A"
         t = f"{r['total_time_s']:.1f}" if r["total_time_s"] is not None else "N/A"
-        print(f"{r['axis']:<15} {r['name']:<35} {acc:>9} {correct:>8} {t:>9}")
-    print("=" * 60)
+        print(f"{r['axis']:<20} {r['name']:<40} {acc:>9} {correct:>8} {t:>9}")
+    print("=" * 80)
 
 
 def save_summary(results: list[dict], output_dir: str) -> None:
@@ -239,9 +258,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--mode",
-        choices=["baseline_only", "stage1_oaat"],
-        default="stage1_oaat",
-        help="실험 모드 (기본: stage1_oaat)",
+        choices=["baseline_only", "oaat"],
+        default="oaat",
+        help="실험 모드 (기본: oaat)",
     )
     parser.add_argument(
         "--output-dir",
@@ -262,14 +281,14 @@ def main() -> None:
     runs = build_run_list(args.mode)
 
     # ── 실행 계획 출력 ──────────────────────────────────────
-    print(f"\n{'=' * 60}")
+    print(f"\n{'=' * 80}")
     print(f"OAAT Sweep  |  mode={args.mode}  |  총 {len(runs)}개 실험")
     print(f"출력 경로   |  {sweep_dir}")
-    print("=" * 60)
-    print(f"{'#':<4} {'실험명':<35} {'축':<15}")
-    print(f"{'─' * 4} {'─' * 35} {'─' * 15}")
+    print("=" * 80)
+    print(f"{'#':<4} {'실험명':<40} {'축':<22}")
+    print(f"{'─' * 4} {'─' * 40} {'─' * 22}")
     for i, r in enumerate(runs, 1):
-        print(f"{i:<4} {r['name']:<35} {r['axis']:<15}")
+        print(f"{i:<4} {r['name']:<40} {r['axis']:<22}")
 
     if not args.yes:
         print("\n실험을 시작합니다. Enter를 누르면 계속, Ctrl+C로 취소합니다...")

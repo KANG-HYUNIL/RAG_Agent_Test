@@ -17,28 +17,31 @@ RAG_Agent_Test/
 ├── ruff.toml
 ├── uv.lock
 ├── configs/                      # Hydra 설정 그룹 (benchmark 실험용)
-│   ├── config.yaml               # 기본값 (serialization=kv_pairs, retrieval=top_k, prompt=raw_stuffing)
+│   ├── config.yaml               # 기본값 (serialization=kv_pairs, retrieval=top_k, prompt=raw_stuffing, query_representation=question_only)
 │   ├── prompt/
-│   │   ├── compress_summarize.yaml
 │   │   ├── few_shot_envelope.yaml
 │   │   ├── labeled_context.yaml
 │   │   ├── raw_stuffing.yaml
 │   │   └── structured_context.yaml
+│   ├── query_representation/
+│   │   ├── question_only.yaml        # baseline
+│   │   └── question_plus_choices.yaml
 │   ├── retrieval/
-│   │   ├── hybrid.yaml
+│   │   ├── hybrid.yaml               # placeholder (미구현)
 │   │   ├── mmr.yaml
 │   │   ├── score_threshold.yaml
-│   │   └── top_k.yaml
+│   │   ├── top_k.yaml
+│   │   └── top_k_category_filter.yaml
 │   └── serialization/
 │       ├── dual.yaml
 │       ├── kv_pairs.yaml
+│       ├── kv_pairs_no_category.yaml  # Category ablation
 │       ├── narrative.yaml
 │       ├── raw.yaml
-│       ├── synthetic.yaml
 │       └── weighted.yaml
 ├── data/
-│   ├── dev.csv                   # 평가용 질문 데이터
-│   └── train.csv                 # 벡터 DB 색인용 학습 데이터
+│   ├── dev.csv                   # 평가용 질문 데이터 (Law 230개, Criminal Law 29개)
+│   └── train.csv                 # 벡터 DB 색인용 학습 데이터 (Law 1834개, Criminal Law 239개)
 ├── outputs/                      # benchmark 실험 결과 CSV/JSON (자동 생성)
 ├── src/                          # 서버 & 에이전트 소스 루트
 │   ├── __init__.py
@@ -53,12 +56,13 @@ RAG_Agent_Test/
 │   │   │   ├── strategy_field_weighted_kv.py
 │   │   │   ├── strategy_kv_pairs.py
 │   │   │   ├── strategy_narrativized_lite.py
-│   │   │   ├── strategy_raw.py
-│   │   │   └── strategy_synthetic_query_expansion.py
+│   │   │   └── strategy_raw.py
+│   │   ├── query_encoder/
+│   │   │   ├── __init__.py
+│   │   │   └── query_encoder.py  # build_query_text(method, question, choices)
 │   │   ├── prompt_builder/
 │   │   │   ├── _registry.py
 │   │   │   ├── prompt_builder.py
-│   │   │   ├── strategy_compress_summarize.py
 │   │   │   ├── strategy_few_shot_envelope.py
 │   │   │   ├── strategy_labeled_context.py
 │   │   │   ├── strategy_raw_stuffing.py
@@ -86,7 +90,7 @@ RAG_Agent_Test/
 │       └── config.py             # Settings 싱글턴 (환경변수 기반)
 └── test/
     ├── benchmark.py              # Hydra 기반 단일 실험 실행
-    └── oaat_sweep.py             # One-Axis-At-a-Time 배치 실험
+    └── oaat_sweep.py             # One-Axis-At-a-Time 배치 실험 (4축 13개)
 ```
 
 ## 초기 Agent System 구축 및 평가 스크립트 실행 방법
@@ -138,11 +142,77 @@ RAG_Agent_Test/
 - 제출 압축 파일 200MB 이하
 - API Key 제출 금지
 
-#### 현재 단계 방향
 
-- 우선 FastAPI + Docker 기반 실행 구조부터 고정
-- inference API DTO와 서버 실행 경로 먼저 정리
-- 이후 RAG 내부 구성요소를 단계적으로 연결
+---
+
+### 260406_데이터 구조 파악
+
+#### 전체 개요
+
+| 항목 | train.csv | dev.csv |
+| --- | --- | --- |
+| 행 수 | 2,073 | 259 |
+| 열 수 | 8 | 8 |
+| 결측치 | 0 | 0 |
+| question 중복 | 0 | 0 |
+| train-dev 간 question 중복 | - | 0 |
+
+| 컬럼명 | 의미 | 비고 |
+| --- | --- | --- |
+| `question` | 문제 본문 | 한국어 객관식 문제 |
+| `answer` | 정답 번호 | `1, 2, 3, 4` 형식 |
+| `A` | 선택지 A | 문자열 |
+| `B` | 선택지 B | 문자열 |
+| `C` | 선택지 C | 문자열 |
+| `D` | 선택지 D | 문자열 |
+| `Category` | 법률 분야 | `Law`, `Criminal Law` |
+| `Human Accuracy` | 인간 정답률 | `0.0 ~ 1.0` 실수 |
+
+| 항목 | 내용 |
+| --- | --- |
+| 정답 형식 | `A/B/C/D`가 아니라 `1/2/3/4`로 저장됨 |
+| 카테고리 수 | 2개 (`Law`, `Criminal Law`) |
+| 텍스트 언어 | 문제/선택지는 한국어, Category는 영어 |
+| 결측치 | 없음 |
+| 질문 중복 | train, dev 내부 및 상호 간 중복 없음 |
+
+#### train.csv
+
+| answer | 개수 |
+| --- | --- |
+| 1 | 480 |
+| 2 | 509 |
+| 3 | 538 |
+| 4 | 546 |
+
+| Category | 개수 |
+| --- | --- |
+| Law | 1,834 |
+| Criminal Law | 239 |
+
+
+#### dev.csv
+
+| answer | 개수 |
+| --- | --- |
+| 1 | 65 |
+| 2 | 63 |
+| 3 | 51 |
+| 4 | 80 |
+
+| Category | 개수 |
+| --- | --- |
+| Law | 230 |
+| Criminal Law | 29 |
+
+#### Human Accuracy 정보
+
+| 항목 | train.csv | dev.csv |
+| --- | --- | --- |
+| 평균 | 0.4474 | 0.4568 |
+| 중앙값 | 0.5795 | 0.5959 |
+| 최소값 | 0.0 | 0.0 |
+| 최대값 | 1.0 | 1.0 |
 
 ### 260406_에이전트 방식 결정: Tool-calling vs 고정형 RAG
 
@@ -208,7 +278,7 @@ RAG_Agent_Test/
 
 
 
-#### 구현 우선순위
+#### 우선 구현 우선순위
 
 
 1. KV Pairs
@@ -227,12 +297,13 @@ RAG_Agent_Test/
 - 단일 포맷 실험 후 복수 포맷 결합
 - 성능 가능성은 있지만 복잡도 증가
 
-5. Synthetic query expansion
-- Doc2Query 계열처럼 retrieval 개선 여지 있음
-- 다만 노이즈 query가 성능을 해칠 수 있어 후순위
+5. Raw row
+
+
 
 
 ---
+
 
 ### 260407_로컬FAISSVS Docker Qdrant
 
@@ -257,27 +328,32 @@ RAG_Agent_Test/
 | Hybrid (dense + sparse) | FAISS dense 검색과 BM25/키워드 검색을 결합 | 의미 유사성과 정확한 용어 일치를 함께 반영 | 구현 복잡도 증가 | 법률처럼 전문 용어와 exact match가 중요한 경우 | 높음 |  ([Microsoft Learn](https://learn.microsoft.com/en-us/azure/search/hybrid-search-overview)) |
 
 
-#### 구축 및 실험 순서
+#### 우선 구축 및 실험 순서
 
 1. 1차 baseline: 고정 Top-k
 2. 2차 개선: Top-k + score threshold
 3. 3차 개선: Top-k + MMR
-4. 4차 개선: Hybrid dense + sparse
+
 
 ---
 
-### 260407_LLM Prompt 방식 고민
+### 260407_LLM User Prompt 방식 고민
 
+| 방법 | 전달 구조 | 코드상 핵심 구현 | 장점 | 단점 | 언제 쓰기 좋은가 | 현재 평가 |
+| --- | --- | --- | --- | --- | --- | --- |
+| raw_stuffing | retrieval 결과 원문을 순서대로 그대로 이어 붙임 | `content_dict`를 `"key: value | ..."` 형태로 펼쳐 단순 연결 | 구현 가장 단순, baseline으로 적합 | 문서 경계가 약하고 구조가 납작함 | 첫 실험, 기준선 확보 |
+| labeled_context | 원문은 유지하되 각 context 앞에 `[참고자료 #N]` 라벨 부착 | raw_stuffing과 동일한 내용 포맷 + 번호 라벨 추가 | 문서 경계가 명확해짐, 디버깅 쉬움 | 내용 구조 자체는 여전히 약함 | raw 대비 작은 개선 실험 | 가벼운 1차 후보 |
+| structured_context | 각 context를 `[참고자료 #N]` 아래 `- 필드명: 값` 형태로 구조화 | `content_dict`를 줄 단위 key-value 블록으로 변환 | 필드 경계가 명확, LLM이 정보 구조를 읽기 쉬움 | 자연어 흐름이 약해지고 데이터 행처럼 보일 수 있음 | 객관식 / 표형 데이터 / 법률 QA처럼 필드가 분명할 때 | 유력 후보 |
+| few_shot_envelope | retrieval 결과를 참고자료가 아니라 예시 문제-정답 데모로 변환 | context에서 `question`, `A~D`, `answer`를 꺼내 few-shot 블록 구성 | 출력 형식 안정화, 문제 풀이 패턴 유도 가능 | 예시 품질에 민감, retrieval 결과가 안 맞으면 오히려 혼동 가능 | 문제 유형이 반복적이고 예시 기반 유도가 잘 먹힐 때 | 실험 가치 높음 |
 
-#### 구축 및 실험 순서
+#### 우선 구축 및 실험 순서
 
 1. 원문 stuffing
 2. labeled_context
 3. structured_context
-4. compress_summarize
-5. few_shot_envelope
+4. few_shot_envelope
 
-
+고정 System Prompt로 우선 수행, User Prompt 의 적합성 판단 후에 System Prompt 고정 작업 진행.
 
 ---
 
@@ -295,18 +371,18 @@ RAG_Agent_Test/
 | --- | --- |
 | 실험 방식 | OAAT (One-At-A-Time) |
 | baseline 실행 | 1회 |
-| 축별 실험 | serialization / retrieval / prompt 중 1개만 변경 |
+| 축별 실험 | serialization / retrieval / prompt / query_representation 중 1개만 변경 |
 | 나머지 축 | baseline 고정 |
 | 목적 | 각 축이 성능에 미치는 영향 분리 확인 |
 | 결과 저장 | `outputs/oaat_sweep/`에 CSV, JSON 저장 |
-| 개별 run 저장 | `outputs/oaat_runs/` 하위 Hydra run dir 저장 |
+| 개별 run 저장 | `outputs/oaat_sweep/{timestamp}/` 하위 Hydra run dir 저장 |
 
-| 축 | baseline 값 |
-| --- | --- |
-| serialization | `kv_pairs` |
-| retrieval | `top_k` |
-| prompt | `raw_stuffing` |
-|  |  |
+| 축 | baseline 값 | 비고 |
+| --- | --- | --- |
+| serialization | `kv_pairs` | exclude_fields: answer, Human Accuracy |
+| retrieval | `top_k` | top_k=5, cosine sim |
+| prompt | `raw_stuffing` | exclude_fields: answer, Human Accuracy |
+| query_representation | `question_only` | 질문 텍스트만 query 임베딩에 사용 |
 
 #### 실행 결과 파싱 항목
 
@@ -319,58 +395,51 @@ RAG_Agent_Test/
 | `avg_time_s` | 문항당 평균 시간 |
 | `status` | 실행 성공 / 실패 상태 |
 
-#### 1차 실험 이후 진행 방식
 
-##### 1단계
 
-- baseline 결과 확인
-- 축별 최고 성능 후보 선별
+#### OAAT 실험 기록표 (총 13개)
 
-##### 2단계
-
-- baseline 갱신
-- 예: `kv_pairs + top_k + raw_stuffing` → `weighted + score_threshold + structured_context`
-
-##### 3단계
-
-- 하이퍼파라미터 튜닝 진행
-- 예:
-    - `top_k`의 `k`
-    - `score_threshold` 값
-    - `mmr`의 `lambda`
-    - `compress_summarize`의 `max_char`
-
-##### 4단계
-
-- 축별 상위 후보만 남겨 제한적 조합 실험 수행
-
-#### Stage 1 실험 기록표
+> 실행 명령: `python test/oaat_sweep.py --yes`
 
 ##### 전체 실험 요약표
 
-| 실험명 | axis | serialization | retrieval | prompt | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| baseline | baseline | kv_pairs | top_k | raw_stuffing |  |  |  |  |  |  |
-| serialization__raw | serialization | raw | top_k | raw_stuffing |  |  |  |  |  |  |
-| serialization__narrative | serialization | narrative | top_k | raw_stuffing |  |  |  |  |  |  |
-| serialization__weighted | serialization | weighted | top_k | raw_stuffing |  |  |  |  |  |  |
-| serialization__dual | serialization | dual | top_k | raw_stuffing |  |  |  |  |  |  |
-| serialization__synthetic | serialization | synthetic | top_k | raw_stuffing |  |  |  |  |  |  |
-| retrieval__score_threshold | retrieval | kv_pairs | score_threshold | raw_stuffing |  |  |  |  |  |  |
-| retrieval__mmr | retrieval | kv_pairs | mmr | raw_stuffing |  |  |  |  |  |  |
-| retrieval__hybrid | retrieval | kv_pairs | hybrid | raw_stuffing |  |  |  |  |  |  |
-| prompt__compress_summarize | prompt | kv_pairs | top_k | compress_summarize |  |  |  |  |  |  |
-| prompt__few_shot_envelope | prompt | kv_pairs | top_k | few_shot_envelope |  |  |  |  |  |  |
-| prompt__labeled_context | prompt | kv_pairs | top_k | labeled_context |  |  |  |  |  |  |
-| prompt__structured_context | prompt | kv_pairs | top_k | structured_context |  |  |  |  |  |  |
+| 실험명 | axis | serialization | retrieval | prompt | query_repr | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
+| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | --- | --- |
+| baseline | baseline | kv_pairs | top_k | raw_stuffing | question_only | 51.74 | 134/259 | 329.6 | 1.273 | ok | baseline |
+| serialization__raw | serialization | raw | top_k | raw_stuffing | question_only | 51.35 | 133/259 | 377.6 | 1.458 | ok | answer 포함 오염 기준선 |
+| serialization__narrative | serialization | narrative | top_k | raw_stuffing | question_only | 50.19 | 130/259 | 384.0 | 1.483 | ok |  |
+| serialization__weighted | serialization | weighted | top_k | raw_stuffing | question_only | 50.58 | 131/259 | 338.9 | 1.309 | ok |  |
+| serialization__dual | serialization | dual | top_k | raw_stuffing | question_only | 50.19 | 130/259 | 337.1 | 1.302 | ok |  |
+| serialization__kv_pairs_no_category | serialization | kv_pairs_no_category | top_k | raw_stuffing | question_only | 49.42 | 128/259 | 344.6 | 1.331 | ok | Category ablation |
+| retrieval__score_threshold | retrieval | kv_pairs | score_threshold | raw_stuffing | question_only | 53.28 | 138/259 | 353.9 | 1.367 | ok | baseline 대비 최고 개선 |
+| retrieval__mmr | retrieval | kv_pairs | mmr | raw_stuffing | question_only | 50.97 | 132/259 | 366.6 | 1.415 | ok |  |
+| retrieval__top_k_category_filter | retrieval | kv_pairs | top_k_category_filter | raw_stuffing | question_only | 50.97 | 132/259 | 337.6 | 1.304 | ok | Law / Criminal Law 도메인 분리 |
+| prompt__labeled_context | prompt | kv_pairs | top_k | labeled_context | question_only | 50.97 | 132/259 | 321.9 | 1.243 | ok |  |
+| prompt__structured_context | prompt | kv_pairs | top_k | structured_context | question_only | 51.74 | 134/259 | 405.3 | 1.565 | ok | baseline와 동일 |
+| prompt__few_shot_envelope | prompt | kv_pairs | top_k | few_shot_envelope | question_only | 48.26 | 125/259 | 433.7 | 1.675 | ok | 성능 저하 |
+| query_representation__question_plus_choices | query_representation | kv_pairs | top_k | raw_stuffing | question_plus_choices | 55.60 | 144/259 | 392.9 | 1.517 | ok | 선택지 결합 쿼리, 전체 최고 |
 
 ##### 축별 최고 후보 정리표
 
 | 축 | baseline | 최고 후보 | accuracy(%) | baseline 대비 변화 | 채택 여부 | 비고 |
-| --- | --- | --- | --- | --- | --- | --- |
-| serialization | kv_pairs |  |  |  |  |  |
-| retrieval | top_k |  |  |  |  |  |
-| prompt | raw_stuffing |  |  |  |  |  |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| serialization | kv_pairs | 없음 | 51.74 | 0.00 | baseline 유지 | 모든 serialization 변형이 baseline 이하 |
+| retrieval | top_k | score_threshold | 53.28 | +1.54 | 채택 후보 | retrieval 축 최고 성능 |
+| prompt | raw_stuffing | structured_context | 51.74 | 0.00 | 보류 | baseline와 동일, 속도는 더 느림 |
+| query_representation | question_only | question_plus_choices | 55.60 | +3.86 | 강력 채택 후보 | 전체 실험 중 최고 성능 |
+
+##### 1차 실험 해석 요약
+
+| 항목 | 해석 |
+| --- | --- |
+| baseline | `kv_pairs + top_k + raw_stuffing + question_only` 조합으로 51.74% 확보 |
+| serialization 축 | baseline보다 나은 변형 없음. 현재 단계에서는 `kv_pairs` 유지가 합리적 |
+| retrieval 축 | `score_threshold`가 가장 효과적. `mmr`, `category_filter`는 baseline 이하 |
+| prompt 축 | `structured_context`는 baseline와 동일, `few_shot_envelope`는 성능 저하 |
+| query 축 | `question_plus_choices`가 가장 큰 개선폭을 보임. 2차 실험 핵심 후보 |
+| 2차 우선 조합 후보 | `kv_pairs + score_threshold + raw_stuffing(or structured_context) + question_plus_choices` |
+
+
 
 
 

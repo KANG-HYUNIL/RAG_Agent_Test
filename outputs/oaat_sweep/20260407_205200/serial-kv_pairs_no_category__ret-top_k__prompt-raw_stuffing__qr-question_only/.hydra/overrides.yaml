@@ -1,0 +1,5 @@
+- serialization=kv_pairs_no_category
+- retrieval=top_k
+- prompt=raw_stuffing
+- query_representation=question_only
+- experiment_name=serialization__kv_pairs_no_category

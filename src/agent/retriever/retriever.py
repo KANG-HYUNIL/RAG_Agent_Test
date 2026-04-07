@@ -55,9 +55,12 @@ class Retriever:
         self.documents.extend(chunks)
 
     def search(
-        self, query_embedding: list[float], top_k: int | None = None
+        self,
+        query_embedding: list[float],
+        top_k: int | None = None,
+        metadata_filter: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Registry 패턴으로 생성된 Strategy를 통해 검색"""
+        """Registry 패턴으로 생성된 Strategy를 통해 검색 후 metadata_filter를 적용합니다."""
         if self.index.ntotal == 0:
             return []
 
@@ -71,4 +74,28 @@ class Retriever:
         if self.config.get("normalize_query", True):
             faiss.normalize_L2(query_np)
 
-        return self.strategy.search(self.index, self.documents, query_np)
+        results = self.strategy.search(self.index, self.documents, query_np)
+
+        # ── Category post-filter ────────────────────────────────
+        cat_cfg = self.config.get("category_filter", None)
+        if metadata_filter and cat_cfg and cat_cfg.get("enabled", False):
+            query_category = metadata_filter.get("Category", "")
+            if query_category:
+                filtered = [
+                    r for r in results
+                    if r.get("content_dict", {}).get("Category", "") == query_category
+                ]
+                min_results: int = int(cat_cfg.get("min_results", 1))
+                fallback: str = str(cat_cfg.get("fallback", "relax"))
+                if len(filtered) >= min_results:
+                    results = filtered
+                elif fallback == "relax":
+                    log.debug(
+                        f"[CategoryFilter] '{query_category}' 매칭 결과 {len(filtered)}개 "
+                        f"(min={min_results}) → fallback: 전체 반환"
+                    )
+                    # results 유지 (전체)
+                else:
+                    results = filtered  # strict: 빈 결과 허용
+
+        return results

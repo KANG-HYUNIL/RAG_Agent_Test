@@ -1,0 +1,9 @@
+method: top_k
+top_k: 5
+metric: "IP"
+normalize_query: true
+
+category_filter:
+  enabled: true
+  fallback: relax   # 필터 후 결과 부족 시 전체 결과로 대체
+  min_results: 1    # fallback 발동 기준 (필터 결과가 이 값 미만이면 relax)

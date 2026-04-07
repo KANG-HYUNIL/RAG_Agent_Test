@@ -26,5 +26,5 @@ class BasePreprocessStrategy:
         # synthetic_query_expansion 등 LLM 호출이 필요한 전략에서 사용
         self.openai_service = openai_service
 
-    def process(self, row: dict) -> str | list[str]:
+    def process(self, row: dict, exclude_fields: list[str] | None = None) -> str | list[str]:
         raise NotImplementedError("서브타입에서 process를 구현해야 합니다.")

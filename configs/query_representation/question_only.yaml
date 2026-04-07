@@ -1,0 +1,2 @@
+method: question_only
+description: "질문 텍스트만 query 임베딩에 사용합니다 (baseline)."

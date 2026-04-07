@@ -12,7 +12,6 @@ class PromptBuilder:
       raw_stuffing       — 원문 그대로 stuffing (baseline)
       labeled_context    — 번호 라벨 부착, 원문 전달
       structured_context — key-value 필드 구조화 전달
-      compressed_context — 최대 글자 수 절삭 후 전달
       few_shot_envelope  — retrieved 예시를 Q&A 데모로 감싸 전달
     """
 

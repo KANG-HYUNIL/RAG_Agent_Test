@@ -13,7 +13,12 @@ class Embedder:
     def __init__(self, openai_service: Any | None = None):
         self.openai_service = openai_service
 
-    def preprocess(self, row: dict, method: str = "kv_pairs") -> str | list[str]:
+    def preprocess(
+        self,
+        row: dict,
+        method: str = "kv_pairs",
+        exclude_fields: list[str] | None = None,
+    ) -> str | list[str]:
         """
         임베딩을 수행하기 전, 데이터를 특정 방법론에 따라 전처리합니다.
         Registry에서 전략 클래스를 조회하여 인스턴스화 후 process()를 호출합니다.
@@ -24,7 +29,7 @@ class Embedder:
                 f"Available: {list(_PREPROCESS_REGISTRY.keys())}"
             )
         strategy = _PREPROCESS_REGISTRY[method](openai_service=self.openai_service)
-        return strategy.process(row)
+        return strategy.process(row, exclude_fields=exclude_fields)
 
     def embed(self, text: str) -> list[float]:
         """

@@ -1,0 +1,23 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: top_k
+  top_k: 5
+  metric: IP
+  normalize_query: true
+prompt:
+  method: labeled_context
+  description: 'labeled_context: 번호 라벨 부착, 원문 전달 (경계 명확화)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: question_only
+  description: 질문 텍스트만 query 임베딩에 사용합니다 (baseline).
+experiment_name: prompt__labeled_context
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

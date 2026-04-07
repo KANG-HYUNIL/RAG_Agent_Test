@@ -1,9 +1,0 @@
-# Compress / summarize then pass 전략
-# retrieved docs를 압축하여 전달합니다 (RECOMP · LongLLMLingua 근거).
-#
-# use_llm_compression: false  → max_chars_per_context 글자 수 단순 절삭
-# use_llm_compression: true   → OpenAI LLM 호출로 실제 압축 요약 (추가 비용 발생)
-method: "compress_summarize"
-max_chars_per_context: 200
-use_llm_compression: false
-description: "compress/summarize then pass: retrieved docs를 압축하여 전달 (토큰 절감)"

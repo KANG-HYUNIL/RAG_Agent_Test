@@ -9,5 +9,7 @@ class RawPreprocessStrategy(BasePreprocessStrategy):
     (예: JSON 형식 또는 Python dict 표기법 그대로)
     """
 
-    def process(self, row: dict) -> str:
+    def process(self, row: dict, exclude_fields: list[str] | None = None) -> str:
+        if exclude_fields:
+            return str({k: v for k, v in row.items() if k not in set(exclude_fields)})
         return str(row)

@@ -1,0 +1,23 @@
+serialization:
+  name: narrative
+  method: narrativized_lite
+  description: 데이터를 자연어 문장 형태로 풀어써서 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: top_k
+  top_k: 5
+  metric: IP
+  normalize_query: true
+prompt:
+  method: raw_stuffing
+  description: '원문 그대로 stuffing: retrieved chunks를 순서대로 그대로 붙여 전달 (baseline)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: question_only
+  description: 질문 텍스트만 query 임베딩에 사용합니다 (baseline).
+experiment_name: serialization__narrative
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

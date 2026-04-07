@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=top_k
+- prompt=few_shot_envelope
+- query_representation=question_only
+- experiment_name=prompt__few_shot_envelope

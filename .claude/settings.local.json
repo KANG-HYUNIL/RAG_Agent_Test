@@ -19,7 +19,10 @@
       "Bash(echo \"type-check exit: $?\")",
       "Bash(grep -E \"\\\\.\\(yaml|py\\)$\")",
       "Bash(python:*)",
-      "Bash(.venv/Scripts/python -c ':*)"
+      "Bash(.venv/Scripts/python -c ':*)",
+      "Bash(make type-check:*)",
+      "Bash(uv pip:*)",
+      "Bash(pip show:*)"
     ]
   }
 }

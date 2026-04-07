@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=top_k
+- prompt=raw_stuffing
+- query_representation=question_plus_choices
+- experiment_name=query_representation__question_plus_choices

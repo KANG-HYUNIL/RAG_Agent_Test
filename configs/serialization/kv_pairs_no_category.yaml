@@ -1,0 +1,4 @@
+name: "kv_pairs_no_category"
+method: "kv_pairs"
+description: "kv_pairs에서 Category도 추가 제외. Category(Law/Criminal Law)의 임베딩 기여 ablation 실험용."
+exclude_fields: ["answer", "Human Accuracy", "Category"]

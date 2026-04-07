@@ -2,5 +2,5 @@
 # 각 context의 content_dict 필드를 "- 필드명: 값" 형식으로 명시적 구조화하여 전달합니다.
 # retrieval score·rank에 의존하지 않으며, optional metadata가 없어도 정상 동작합니다.
 method: "structured_context"
-exclude_fields: []
 description: "structured_context: key-value 필드 구조화 전달 (score 의존 없음)"
+exclude_fields: ["answer", "Human Accuracy"]

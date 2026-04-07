@@ -1,0 +1,2 @@
+method: question_plus_choices
+description: "질문 텍스트 + 선택지 A~D를 결합하여 query 임베딩에 사용합니다."

@@ -1,3 +1,4 @@
 name: raw
 method: raw
 description: 아무런 판단 및 가공 처리 없이 파이썬 dict 형식 그대로 문자열화하여 임베딩합니다 (가장 기본적인 베이스라인).
+exclude_fields: []

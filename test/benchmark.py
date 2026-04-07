@@ -7,6 +7,7 @@ from datetime import datetime
 
 import hydra
 import pandas as pd
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
 # 콘솔 출력 시 인코딩 문제 방지
@@ -37,6 +38,7 @@ def main(cfg: DictConfig) -> None:
     from agent.data_loader import DataLoader
     from agent.embedder import Embedder
     from agent.prompt_builder import PromptBuilder
+    from agent.query_encoder import build_query_text
     from agent.retriever import Retriever
     from app.service.openai_service import OpenAIService
     from config.config import get_settings
@@ -67,7 +69,7 @@ def main(cfg: DictConfig) -> None:
     prompt_cfg.pop("description", None)  # 설명 필드는 LLM에 전달하지 않음
     prompt_kwargs: dict = prompt_cfg  # 나머지가 전략별 파라미터
 
-    top_k: int = int(cfg.retrieval.k) if "k" in cfg.retrieval else 3
+    top_k: int = int(cfg.retrieval.top_k) if "top_k" in cfg.retrieval else 3
 
     train_data_path = os.path.join(project_root, "data", "train.csv")
 
@@ -84,12 +86,23 @@ def main(cfg: DictConfig) -> None:
     log.info(
         f"[3/4] 전처리 및 임베딩 텍스트 추출 중... (직렬화 전략: {cfg.serialization.method})"
     )
+
+    serial_cfg_raw = OmegaConf.to_container(cfg.serialization, resolve=True)
+    if not isinstance(serial_cfg_raw, dict):
+        msg = "serialization 설정은 dict여야 합니다."
+        raise TypeError(msg)
+    serial_exclude: list[str] = list(
+        serial_cfg_raw.get("exclude_fields", ["answer", "Human Accuracy"])
+    )
+
     expand_chunks: list = []
     texts_to_embed: list[str] = []
 
     for chunk in chunks:
         preprocessed = embedder.preprocess(
-            chunk["content_dict"], method=cfg.serialization.method
+            chunk["content_dict"],
+            method=cfg.serialization.method,
+            exclude_fields=serial_exclude,
         )
         if isinstance(preprocessed, list):
             for text in preprocessed:
@@ -119,8 +132,17 @@ def main(cfg: DictConfig) -> None:
     # ──────────────────────────────────────────────────────────
     # Phase 2: dev 데이터 추론 및 평가
     # ──────────────────────────────────────────────────────────
+    query_repr_method: str = str(cfg.query_representation.method)
+    category_filter_enabled: bool = bool(
+        cfg.retrieval.get("category_filter", {}).get("enabled", False)
+    )
+
     log.info("\n[Phase 2] Inference & Evaluation (dev 데이터 평가)")
-    log.info(f"  프롬프트 전략: {prompt_method}  |  top_k: {top_k}")
+    log.info(
+        f"  프롬프트 전략: {prompt_method}  |  top_k: {top_k}"
+        f"  |  query_repr: {query_repr_method}"
+        f"  |  category_filter: {category_filter_enabled}"
+    )
 
     dev_data_path = os.path.join(project_root, "data", "dev.csv")
     dev_rows = data_loader.load_csv(dev_data_path)
@@ -151,11 +173,24 @@ def main(cfg: DictConfig) -> None:
         is_correct = False
 
         try:
-            # 1. 쿼리 임베딩
-            query_vector = embedder.embed(question)
+            # 1. 쿼리 텍스트 구성 및 임베딩
+            query_text = build_query_text(
+                method=query_repr_method,
+                question=question,
+                choices=choices,
+            )
+            query_vector = embedder.embed(query_text)
 
-            # 2. 관련 컨텍스트 검색
-            retrieved_nodes = retriever.search(query_vector, top_k=top_k)
+            # 2. 관련 컨텍스트 검색 (category_filter 설정 시 metadata 전달)
+            query_category = str(row.get("Category", ""))
+            metadata_filter = (
+                {"Category": query_category}
+                if category_filter_enabled and query_category
+                else None
+            )
+            retrieved_nodes = retriever.search(
+                query_vector, top_k=top_k, metadata_filter=metadata_filter
+            )
 
             # 3. 프롬프트 생성 — PromptResult(system_prompt, user_prompt) 반환
             prompt_result = prompt_builder.build_prompt(
@@ -239,8 +274,8 @@ def main(cfg: DictConfig) -> None:
     log.info("=" * 60)
 
     # ── CSV 저장 ─────────────────────────────────────────────
-    # Hydra output_dir은 현재 작업 디렉터리(CWD)로 자동 변경되어 있음
-    output_dir = os.getcwd()
+    # HydraConfig에서 실제 run.dir 경로를 가져옴 (Hydra 1.3+ job.chdir=False 대응)
+    output_dir = HydraConfig.get().runtime.output_dir
     os.makedirs(output_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

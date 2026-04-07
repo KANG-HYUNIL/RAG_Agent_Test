@@ -1,0 +1,14 @@
+﻿name,axis,serialization,retrieval,prompt,query_representation,accuracy_pct,correct,total,total_time_s,avg_time_s,status
+baseline,baseline,kv_pairs,top_k,raw_stuffing,question_only,51.74,134,259,329.62,1.273,ok
+serialization__raw,serialization,raw,top_k,raw_stuffing,question_only,51.35,133,259,377.6,1.458,ok
+serialization__narrative,serialization,narrative,top_k,raw_stuffing,question_only,50.19,130,259,384.02,1.483,ok
+serialization__weighted,serialization,weighted,top_k,raw_stuffing,question_only,50.58,131,259,338.88,1.308,ok
+serialization__dual,serialization,dual,top_k,raw_stuffing,question_only,50.19,130,259,337.07,1.301,ok
+serialization__kv_pairs_no_category,serialization,kv_pairs_no_category,top_k,raw_stuffing,question_only,49.42,128,259,344.56,1.33,ok
+retrieval__score_threshold,retrieval,kv_pairs,score_threshold,raw_stuffing,question_only,53.28,138,259,353.92,1.366,ok
+retrieval__mmr,retrieval,kv_pairs,mmr,raw_stuffing,question_only,50.97,132,259,366.59,1.415,ok
+retrieval__top_k_category_filter,retrieval,kv_pairs,top_k_category_filter,raw_stuffing,question_only,50.97,132,259,337.61,1.303,ok
+prompt__labeled_context,prompt,kv_pairs,top_k,labeled_context,question_only,50.97,132,259,321.92,1.243,ok
+prompt__structured_context,prompt,kv_pairs,top_k,structured_context,question_only,51.74,134,259,405.27,1.565,ok
+prompt__few_shot_envelope,prompt,kv_pairs,top_k,few_shot_envelope,question_only,48.26,125,259,433.69,1.674,ok
+query_representation__question_plus_choices,query_representation,kv_pairs,top_k,raw_stuffing,question_plus_choices,55.6,144,259,392.93,1.517,ok

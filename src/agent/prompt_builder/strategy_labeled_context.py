@@ -12,11 +12,11 @@ class LabeledContextPromptStrategy(BasePromptStrategy):
       - retrieved contexts에 [참고자료 #N] 번호 라벨을 붙여 전달합니다.
       - 내용은 원문 그대로이며, 라벨만 추가됩니다.
       - raw_stuffing과의 차이: 각 항목의 경계가 명확하게 구분됩니다.
-      - structured_context와의 차이: 필드를 재구조화하지 않고 원문을 유지합니다.
-      - position_optimized와의 차이: 순서 재배치를 수행하지 않습니다.
-                                     배치 순서는 retrieval 레이어가 결정합니다.
 
     system prompt: 기본 역할 지시 (DEFAULT_SYSTEM_PROMPT)
+
+    config 파라미터:
+      exclude_fields (list[str], 기본 []): context 전달에서 제외할 필드 이름 목록
     """
 
     def build(
@@ -24,12 +24,16 @@ class LabeledContextPromptStrategy(BasePromptStrategy):
         question: str,
         choices: dict[str, str],
         contexts: list[dict],
+        exclude_fields: list[str] | None = None,
         **kwargs: Any,
     ) -> PromptResult:
+        excluded: set[str] = set(exclude_fields or [])
         context_parts: list[str] = []
         for i, ctx in enumerate(contexts, start=1):
             content = ctx.get("content_dict", {})
-            text = " | ".join(f"{k}: {v}" for k, v in content.items() if v)
+            text = " | ".join(
+                f"{k}: {v}" for k, v in content.items() if v and k not in excluded
+            )
             context_parts.append(f"[참고자료 #{i}]\n{text}")
 
         context_block = (

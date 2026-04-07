@@ -10,7 +10,6 @@ LLM 프롬프트 생성 및 Registry 패턴 기반 프롬프트 전략 관리.
   strategy_raw_stuffing.py       — 전략: 원문 그대로 stuffing (baseline)
   strategy_labeled_context.py    — 전략: 번호 라벨 부착, 원문 전달
   strategy_structured_context.py — 전략: key-value 필드 구조화 전달
-  strategy_compress_summarize.py — 전략: 최대 글자 수 절삭 후 전달
   strategy_few_shot_envelope.py  — 전략: retrieved 예시를 Q&A 데모로 감싸 전달
 
 설계 원칙:
@@ -26,7 +25,6 @@ LLM 프롬프트 생성 및 Registry 패턴 기반 프롬프트 전략 관리.
 
 # strategy_* 모듈 import → @register_prompt 데코레이터가 실행되어 _PROMPT_REGISTRY에 자동 등록
 from . import (
-    strategy_compress_summarize,
     strategy_few_shot_envelope,
     strategy_labeled_context,
     strategy_raw_stuffing,
@@ -38,7 +36,6 @@ from .prompt_builder import PromptBuilder
 __all__ = [
     "PromptBuilder",
     "PromptResult",
-    "strategy_compress_summarize",
     "strategy_few_shot_envelope",
     "strategy_labeled_context",
     "strategy_raw_stuffing",

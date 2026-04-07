@@ -2,6 +2,7 @@ defaults:
   - serialization: kv_pairs
   - retrieval: top_k
   - prompt: raw_stuffing
+  - query_representation: question_only
   - override hydra/job_logging: custom
   - _self_
 

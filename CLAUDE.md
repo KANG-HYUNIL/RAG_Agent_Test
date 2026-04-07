@@ -65,9 +65,13 @@ Each axis is a pluggable strategy selected via Hydra config groups under `config
 
 | Axis | Config group | Available strategies |
 |---|---|---|
-| **Serialization** (embedding text format) | `configs/serialization/` | `raw`, `kv_pairs` (baseline), `narrative`, `weighted`, `dual`, `synthetic` |
-| **Retrieval** (FAISS search strategy) | `configs/retrieval/` | `top_k` (baseline), `score_threshold`, `mmr`, `hybrid` |
-| **Prompt** (LLM context assembly) | `configs/prompt/` | `raw_stuffing` (baseline), `labeled_context`, `structured_context`, `compress_summarize`, `few_shot_envelope` |
+| **Serialization** (embedding text format) | `configs/serialization/` | `raw`, `kv_pairs` (baseline), `narrative` (→`narrativized_lite`), `weighted` (→`field_weighted_kv`), `dual` (→`dual_representation`), `kv_pairs_no_category` (ablation) |
+| **Retrieval** (FAISS search strategy) | `configs/retrieval/` | `top_k` (baseline), `score_threshold`, `mmr`, `top_k_category_filter`, `hybrid` (미구현) |
+| **Prompt** (LLM context assembly) | `configs/prompt/` | `raw_stuffing` (baseline), `labeled_context`, `structured_context`, `few_shot_envelope` |
+| **Query Representation** (query embedding text) | `configs/query_representation/` | `question_only` (baseline), `question_plus_choices` |
+
+All serialization strategies accept `exclude_fields: list[str]` from config (default: `["answer", "Human Accuracy"]`). `category_filter` in retrieval configs enables Law/Criminal Law post-filter via `metadata_filter` passed from `benchmark.py`.
+
 
 The baseline is defined in `configs/config.yaml` (`serialization=kv_pairs`, `retrieval=top_k`, `prompt=raw_stuffing`).
 

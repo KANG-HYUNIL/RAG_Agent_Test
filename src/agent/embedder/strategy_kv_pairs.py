@@ -9,9 +9,7 @@ class KVPairsPreprocessStrategy(BasePreprocessStrategy):
     question, A, B, C, D, Category 등의 키-값 쌍 직렬화.
     """
 
-    def process(self, row: dict) -> str:
-        items = []
-        for k, v in row.items():
-            if k not in ["answer", "Human Accuracy"]:
-                items.append(f"{k}: {v}")
+    def process(self, row: dict, exclude_fields: list[str] | None = None) -> str:
+        excluded = set(exclude_fields if exclude_fields is not None else ["answer", "Human Accuracy"])
+        items = [f"{k}: {v}" for k, v in row.items() if k not in excluded]
         return " / ".join(items)

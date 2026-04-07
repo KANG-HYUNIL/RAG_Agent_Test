@@ -12,7 +12,6 @@ OpenAI text-embedding-3-small 호출 및 Registry 패턴 기반 전처리 전략
   strategy_kv_pairs.py                 — 전략: KV Pairs
   strategy_narrativized_lite.py        — 전략: Narrativized-lite
   strategy_raw.py                      — 전략: Raw (Baseline)
-  strategy_synthetic_query_expansion.py — 전략: Synthetic Query Expansion
 
 외부 import 예시:
     from agent.embedder import Embedder
@@ -26,7 +25,6 @@ from . import (
     strategy_kv_pairs,
     strategy_narrativized_lite,
     strategy_raw,
-    strategy_synthetic_query_expansion,
 )
 from .embedder import Embedder
 
@@ -37,5 +35,4 @@ __all__ = [
     "strategy_kv_pairs",
     "strategy_narrativized_lite",
     "strategy_raw",
-    "strategy_synthetic_query_expansion",
 ]
