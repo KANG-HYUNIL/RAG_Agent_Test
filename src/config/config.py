@@ -42,7 +42,7 @@ class Settings:
 
     # 서버 호스트 (기본값: 0.0.0.0)
     server_host: str = field(
-        default_factory=lambda: os.getenv("SERVER_HOST", "0.0.0.0")  # noqa: S104
+        default_factory=lambda: os.getenv("SERVER_HOST", "0.0.0.0")
     )
 
     # 서버 포트 (기본값: 8000)

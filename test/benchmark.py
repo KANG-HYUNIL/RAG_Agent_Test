@@ -5,6 +5,10 @@ import sys
 import time
 from datetime import datetime
 
+import hydra
+import pandas as pd
+from omegaconf import DictConfig, OmegaConf
+
 # 콘솔 출력 시 인코딩 문제 방지
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -13,18 +17,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 src_path = os.path.join(project_root, "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
-
-import hydra  # noqa: E402
-import pandas as pd  # noqa: E402
-from omegaconf import DictConfig, OmegaConf  # noqa: E402
-
-from agent.chunker import Chunker  # noqa: E402
-from agent.data_loader import DataLoader  # noqa: E402
-from agent.embedder import Embedder  # noqa: E402
-from agent.prompt_builder import PromptBuilder  # noqa: E402
-from agent.retriever import Retriever  # noqa: E402
-from app.service.openai_service import OpenAIService  # noqa: E402
-from config.config import get_settings  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +33,14 @@ def _print_table(df: pd.DataFrame, title: str = "") -> None:
 
 @hydra.main(version_base=None, config_path="../configs", config_name="config")
 def main(cfg: DictConfig) -> None:
+    from agent.chunker import Chunker
+    from agent.data_loader import DataLoader
+    from agent.embedder import Embedder
+    from agent.prompt_builder import PromptBuilder
+    from agent.retriever import Retriever
+    from app.service.openai_service import OpenAIService
+    from config.config import get_settings
+
     log.info("=" * 60)
     log.info("RAG Pipeline Benchmark")
     log.info("=" * 60)
@@ -58,7 +58,11 @@ def main(cfg: DictConfig) -> None:
     prompt_builder = PromptBuilder()
 
     # prompt config → method 키와 전략별 kwargs 분리
-    prompt_cfg: dict = OmegaConf.to_container(cfg.prompt, resolve=True)  # type: ignore[assignment]
+    prompt_cfg_raw = OmegaConf.to_container(cfg.prompt, resolve=True)
+    if not isinstance(prompt_cfg_raw, dict):
+        msg = "prompt 설정은 dict여야 합니다."
+        raise TypeError(msg)
+    prompt_cfg: dict = prompt_cfg_raw
     prompt_method: str = str(prompt_cfg.pop("method"))
     prompt_cfg.pop("description", None)  # 설명 필드는 LLM에 전달하지 않음
     prompt_kwargs: dict = prompt_cfg  # 나머지가 전략별 파라미터

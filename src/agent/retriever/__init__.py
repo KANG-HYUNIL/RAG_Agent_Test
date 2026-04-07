@@ -18,7 +18,7 @@ FAISS 기반 유사도 검색 및 Registry 패턴 기반 전략 관리.
 """
 
 # strategy_* 모듈 import → @register_strategy 데코레이터가 실행되어 RETRIEVAL_STRATEGIES에 자동 등록
-from . import (  # noqa: F401
+from . import (
     strategy_hybrid,
     strategy_mmr,
     strategy_score_threshold,
@@ -26,4 +26,10 @@ from . import (  # noqa: F401
 )
 from .retriever import Retriever
 
-__all__ = ["Retriever"]
+__all__ = [
+    "Retriever",
+    "strategy_hybrid",
+    "strategy_mmr",
+    "strategy_score_threshold",
+    "strategy_top_k",
+]

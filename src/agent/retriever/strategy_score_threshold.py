@@ -1,10 +1,9 @@
 from typing import Any
 
-import faiss
 import numpy as np
 from omegaconf import DictConfig
 
-from ._registry import BaseRetrievalStrategy, register_strategy
+from ._registry import BaseRetrievalStrategy, _FaissIndex, register_strategy
 
 
 @register_strategy("score_threshold")
@@ -18,12 +17,12 @@ class ScoreThresholdRetrievalStrategy(BaseRetrievalStrategy):
 
     def search(
         self,
-        index: faiss.Index,
+        index: _FaissIndex,
         documents: list[dict[str, Any]],
         query_np: np.ndarray,
     ) -> list[dict[str, Any]]:
         # 먼저 top_k 탐색
-        distances, indices = index.search(query_np, self.top_k)  # type: ignore[call-arg]
+        distances, indices = index.search(query_np, self.top_k)
 
         results = []
         for dist, idx in zip(distances[0], indices[0], strict=False):

@@ -1,11 +1,11 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import faiss
 import numpy as np
 from omegaconf import DictConfig
 
-from ._registry import RETRIEVAL_STRATEGIES
+from ._registry import RETRIEVAL_STRATEGIES, _FaissIndex
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,8 @@ class Retriever:
         self.embedding_dim = embedding_dim
 
         # 내적(Inner Product) 인덱스 생성. (top_k 기본 동작이 Cosine Sim이므로 FlatIP)
-        self.index = faiss.IndexFlatIP(embedding_dim)
+        # cast: faiss의 SWIG 스텁은 런타임 패치 전 시그니처를 노출하므로 _FaissIndex Protocol로 캐스팅
+        self.index: _FaissIndex = cast(_FaissIndex, faiss.IndexFlatIP(embedding_dim))
 
         # 원본 청크(문서 내용)를 식별하기 위해 인메모리 리스트로 유지합니다.
         self.documents: list[dict[str, Any]] = []
@@ -50,7 +51,7 @@ class Retriever:
         # 길이를 1로 정규화
         faiss.normalize_L2(embeddings_np)
 
-        self.index.add(embeddings_np)  # type: ignore[call-arg]
+        self.index.add(embeddings_np)
         self.documents.extend(chunks)
 
     def search(

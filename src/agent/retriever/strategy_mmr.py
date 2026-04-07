@@ -1,11 +1,10 @@
 import logging
 from typing import Any
 
-import faiss
 import numpy as np
 from omegaconf import DictConfig
 
-from ._registry import BaseRetrievalStrategy, register_strategy
+from ._registry import BaseRetrievalStrategy, _FaissIndex, register_strategy
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ class MMRRetrievalStrategy(BaseRetrievalStrategy):
 
     def search(
         self,
-        index: faiss.Index,
+        index: _FaissIndex,
         documents: list[dict[str, Any]],
         query_np: np.ndarray,
     ) -> list[dict[str, Any]]:
@@ -36,7 +35,7 @@ class MMRRetrievalStrategy(BaseRetrievalStrategy):
         if actual_fetch == 0:
             return []
 
-        distances, indices = index.search(query_np, actual_fetch)  # type: ignore[call-arg]
+        distances, indices = index.search(query_np, actual_fetch)
 
         # 2. 결과 인덱스와 거리를 추출
         candidate_indices = [
@@ -48,7 +47,7 @@ class MMRRetrievalStrategy(BaseRetrievalStrategy):
         # 3. FAISS에서 문서 벡터 재추출 (IndexFlatIP 등 원본을 들고 있는 인덱스 유형만 reconstruct 지원됨)
         try:
             candidate_vectors = np.array(
-                [index.reconstruct(int(i)) for i in candidate_indices],  # type: ignore[call-arg]
+                [index.reconstruct(int(i)) for i in candidate_indices],
                 dtype=np.float32,
             )
         except Exception as e:
@@ -81,7 +80,7 @@ class MMRRetrievalStrategy(BaseRetrievalStrategy):
 
             # 현재까지 선택된 문서 벡터들 추출
             selected_docs_vecs = np.array(
-                [index.reconstruct(int(i)) for i in selected_indices],  # type: ignore[call-arg]
+                [index.reconstruct(int(i)) for i in selected_indices],
                 dtype=np.float32,
             )
 

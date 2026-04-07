@@ -1,8 +1,24 @@
-from typing import Any
+from typing import Any, Protocol
 
-import faiss
 import numpy as np
 from omegaconf import DictConfig
+
+# ==========================================
+# FAISS Index Protocol
+# ==========================================
+
+
+class _FaissIndex(Protocol):
+    """FAISS IndexFlatIP의 numpy 편의 API(class_wrappers 런타임 패치 버전)를 나타내는 구조적 타입."""
+
+    ntotal: int
+
+    def add(self, x: np.ndarray) -> None: ...
+
+    def search(self, x: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]: ...
+
+    def reconstruct(self, key: int) -> np.ndarray: ...
+
 
 # ==========================================
 # Retrieval Strategy Registry
@@ -30,7 +46,7 @@ class BaseRetrievalStrategy:
 
     def search(
         self,
-        index: faiss.Index,
+        index: _FaissIndex,
         documents: list[dict[str, Any]],
         query_np: np.ndarray,
     ) -> list[dict[str, Any]]:

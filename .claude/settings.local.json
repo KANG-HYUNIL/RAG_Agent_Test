@@ -10,7 +10,13 @@
       "Bash(xargs wc:*)",
       "Bash(rm src/agent/prompt_builder/strategy_citation_constrained.py src/agent/prompt_builder/strategy_position_optimized.py src/agent/prompt_builder/strategy_evidence_packet.py)",
       "Bash(rm configs/prompt/citation_constrained.yaml configs/prompt/position_optimized.yaml configs/prompt/evidence_packet.yaml)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Read(//c/Users/hik88/Desktop/BIT_Uni/Resume_지원기록/지원과제항목들/\\(코테_과제등/\\)/260404_AgentDeveloper인턴_과제전형/RAG_Agent/**)",
+      "Bash(find src:*)",
+      "Bash(make lint:*)",
+      "Bash(echo \"lint exit: $?\")",
+      "Bash(echo \"format exit: $?\")",
+      "Bash(echo \"type-check exit: $?\")"
     ]
   }
 }
