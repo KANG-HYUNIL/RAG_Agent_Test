@@ -1,6 +1,6 @@
 from typing import Any
 
-from ._registry import PromptResult, _PROMPT_REGISTRY
+from ._registry import _PROMPT_REGISTRY, PromptResult
 
 
 class PromptBuilder:

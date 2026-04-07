@@ -1,39 +1,55 @@
-# 빌드 단계: 모든 의존성 설치
+# ─────────────────────────────────────────────────────────────
+# 빌드 단계: uv로 의존성을 .venv 폴더에 설치
+# ─────────────────────────────────────────────────────────────
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
 WORKDIR /app
 
-# (선택) uv 캐시 활용을 위한 설정
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
-# 설정 파일 복사
 COPY pyproject.toml uv.lock ./
-
-# 의존성 설치 (.venv 폴더에 설치됨)
 RUN uv sync --frozen --no-install-project --no-dev
 
-# ---------------------------------------------------------
-# 실행 단계: 가벼운 런타임 구성
+# ─────────────────────────────────────────────────────────────
+# 실행 단계: 최소 런타임 이미지
+# ─────────────────────────────────────────────────────────────
 FROM python:3.13-slim-bookworm
 
 WORKDIR /app
 
-# 빌드 단계의 설치 결과물(.venv)만 가져옴
+# 빌드 단계의 .venv만 복사 (소스는 별도)
 COPY --from=builder /app/.venv /app/.venv
 
-# 모든 소스(src 패키지 및 과제 데이터 폴더) 복사
+# 소스 복사
+# src/ 내용을 /app/src/ 에 두고, PYTHONPATH=/app/src 로 설정해
+# `from app.server import ...`, `from config.config import ...` 가 정상 동작합니다.
 COPY src/ /app/src/
-COPY ai-assigment+/ /app/ai-assigment+/
+COPY data/ /app/data/
+COPY configs/ /app/configs/
 
-# 가상환경 바이너리를 PATH의 맨 앞에 두어 우선 사용하게 함
+# 가상환경 우선 실행
 ENV PATH="/app/.venv/bin:$PATH"
 
-# [중요] /app을 PYTHONPATH에 포함시켜 src 패키지가 root가 되도록 함
-ENV PYTHONPATH="/app"
+# /app/src 를 모듈 루트로 설정
+# → app/, config/, agent/ 패키지가 최상위로 인식됨
+ENV PYTHONPATH="/app/src"
 
-# API 실행 포트
+# healthcheck용 curl 설치
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8000
 
-# 모듈 방식(-m) 실행으로 패키지 임포트 유연성 확보
-CMD ["python", "-m", "src.main"]
+# 컨테이너 헬스체크:
+#   - interval: 10초마다 체크
+#   - timeout: 응답 대기 5초
+#   - start-period: 서버 시작 후 30초 동안은 실패해도 unhealthy로 간주 안 함
+#     (RAG 파이프라인 초기화 시 더 길게 조정 필요 — 60~120s 권장)
+#   - retries: 3회 연속 실패 시 unhealthy
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# uvicorn으로 직접 실행 (PYTHONPATH=/app/src 이므로 app.server 가 /app/src/app/server.py 로 해석)
+CMD ["uvicorn", "app.server:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

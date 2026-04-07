@@ -1,4 +1,4 @@
-from ._registry import register_preprocess, BasePreprocessStrategy
+from ._registry import BasePreprocessStrategy, register_preprocess
 
 
 @register_preprocess("kv_pairs")

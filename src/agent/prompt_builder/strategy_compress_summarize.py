@@ -37,9 +37,15 @@ class CompressSummarizePromptStrategy(BasePromptStrategy):
         for i, ctx in enumerate(contexts, start=1):
             content = ctx.get("content_dict", {})
             raw_text = " | ".join(f"{k}: {v}" for k, v in content.items() if v)
-            compressed_parts.append(f"[압축 자료 #{i}]\n{self._truncate(raw_text, max_chars_per_context)}")
+            compressed_parts.append(
+                f"[압축 자료 #{i}]\n{self._truncate(raw_text, max_chars_per_context)}"
+            )
 
-        context_block = "\n\n".join(compressed_parts) if compressed_parts else "참고할 자료가 없습니다."
+        context_block = (
+            "\n\n".join(compressed_parts)
+            if compressed_parts
+            else "참고할 자료가 없습니다."
+        )
 
         choice_block = (
             f"A) {choices.get('A', '')}\n"

@@ -28,7 +28,9 @@ class RawStuffingPromptStrategy(BasePromptStrategy):
             content = ctx.get("content_dict", {})
             raw_parts.append(" | ".join(f"{k}: {v}" for k, v in content.items() if v))
 
-        context_block = "\n\n".join(raw_parts) if raw_parts else "참고할 자료가 없습니다."
+        context_block = (
+            "\n\n".join(raw_parts) if raw_parts else "참고할 자료가 없습니다."
+        )
 
         choice_block = (
             f"A) {choices.get('A', '')}\n"

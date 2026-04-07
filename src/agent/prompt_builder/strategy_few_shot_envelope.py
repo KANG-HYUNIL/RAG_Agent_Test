@@ -2,7 +2,16 @@ from typing import Any
 
 from ._registry import BasePromptStrategy, PromptResult, register_prompt
 
-_ANSWER_MAP: dict[Any, str] = {1: "A", 2: "B", 3: "C", 4: "D", "1": "A", "2": "B", "3": "C", "4": "D"}
+_ANSWER_MAP: dict[Any, str] = {
+    1: "A",
+    2: "B",
+    3: "C",
+    4: "D",
+    "1": "A",
+    "2": "B",
+    "3": "C",
+    "4": "D",
+}
 
 
 @register_prompt("few_shot_envelope")
@@ -20,8 +29,6 @@ class FewShotEnvelopePromptStrategy(BasePromptStrategy):
     config 파라미터:
       num_examples (int, 기본 3): 사용할 예시 수 (contexts 개수 초과 시 전체 사용)
     """
-
-
 
     @staticmethod
     def _answer_letter(raw: Any) -> str:
@@ -45,7 +52,9 @@ class FewShotEnvelopePromptStrategy(BasePromptStrategy):
             ex_b = content.get("B", "")
             ex_c = content.get("C", "")
             ex_d = content.get("D", "")
-            ex_answer = self._answer_letter(content.get("answer", content.get("Answer", "")))
+            ex_answer = self._answer_letter(
+                content.get("answer", content.get("Answer", ""))
+            )
 
             shot_parts.append(
                 f"[예시 {i}]\n"

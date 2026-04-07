@@ -1,8 +1,9 @@
+from typing import Any
+
 import faiss
 import numpy as np
-from typing import List, Dict, Any
 
-from ._registry import register_strategy, BaseRetrievalStrategy
+from ._registry import BaseRetrievalStrategy, register_strategy
 
 
 @register_strategy("hybrid")
@@ -14,9 +15,9 @@ class HybridRetrievalStrategy(BaseRetrievalStrategy):
     def search(
         self,
         index: faiss.Index,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         query_np: np.ndarray,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError(
             "HybridRetrievalStrategy는 아직 완전 구현되지 않았습니다. Sparse 지원 처리가 필요합니다."
         )

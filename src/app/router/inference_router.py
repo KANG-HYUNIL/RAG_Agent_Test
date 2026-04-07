@@ -9,7 +9,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.controller.inference_controller import InferenceController, get_inference_controller
+from app.controller.inference_controller import (
+    InferenceController,
+    get_inference_controller,
+)
 from app.types import InferenceRequest, InferenceResponse
 
 # 추론 도메인 라우터 인스턴스

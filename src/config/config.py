@@ -35,7 +35,9 @@ class Settings:
 
     # OpenAI 임베딩 모델 이름 (기본값: text-embedding-3-small)
     openai_embedding_model: str = field(
-        default_factory=lambda: os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+        default_factory=lambda: os.getenv(
+            "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
+        )
     )
 
     # 서버 호스트 (기본값: 0.0.0.0)

@@ -20,12 +20,6 @@ class StructuredContextPromptStrategy(BasePromptStrategy):
       exclude_fields (list[str], 기본 []): 전달에서 제외할 필드 이름 목록
     """
 
-    system_prompt: str = (
-        "당신은 대한민국 법률 전문가이자 정답 분류기입니다. "
-        "아래에 제공된 참고자료의 필드 정보만을 근거로 문제를 푸세요. "
-        "반드시 A, B, C, D 중 하나의 알파벳만 출력하세요. 다른 설명은 추가하지 마세요."
-    )
-
     def build(
         self,
         question: str,

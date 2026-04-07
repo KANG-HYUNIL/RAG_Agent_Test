@@ -1,8 +1,9 @@
+from typing import Any
+
 import faiss
 import numpy as np
-from typing import List, Dict, Any
 
-from ._registry import register_strategy, BaseRetrievalStrategy
+from ._registry import BaseRetrievalStrategy, register_strategy
 
 
 @register_strategy("top_k")
@@ -12,14 +13,14 @@ class TopKRetrievalStrategy(BaseRetrievalStrategy):
     def search(
         self,
         index: faiss.Index,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         query_np: np.ndarray,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         # faiss.search 반환값: (거리/유사도 배열, 해당하는 문서의 인덱스 번호 배열)
-        distances, indices = index.search(query_np, self.top_k)
+        distances, indices = index.search(query_np, self.top_k)  # type: ignore[call-arg]
 
         results = []
-        for dist, idx in zip(distances[0], indices[0]):
+        for dist, idx in zip(distances[0], indices[0], strict=False):
             if idx != -1 and idx < len(documents):
                 doc_info = documents[idx].copy()
                 doc_info["score"] = float(dist)

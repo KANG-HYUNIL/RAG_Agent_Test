@@ -1,0 +1,15 @@
+services:
+  rag-agent:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # Compose 레벨 헬스체크 — Dockerfile HEALTHCHECK 와 동일 조건으로 재선언.
+    # docker compose up --wait 실행 시 healthy 상태 진입 후 프롬프트가 반환됩니다.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

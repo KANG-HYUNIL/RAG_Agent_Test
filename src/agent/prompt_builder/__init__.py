@@ -24,14 +24,15 @@ LLM 프롬프트 생성 및 Registry 패턴 기반 프롬프트 전략 관리.
     from agent.prompt_builder._registry import _PROMPT_REGISTRY, BasePromptStrategy, register_prompt
 """
 
+# strategy_* 모듈 import → @register_prompt 데코레이터가 실행되어 _PROMPT_REGISTRY에 자동 등록
+from . import (
+    strategy_compress_summarize,  # noqa: F401
+    strategy_few_shot_envelope,  # noqa: F401
+    strategy_labeled_context,  # noqa: F401
+    strategy_raw_stuffing,  # noqa: F401
+    strategy_structured_context,  # noqa: F401
+)
 from ._registry import PromptResult
 from .prompt_builder import PromptBuilder
-
-# strategy_* 모듈 import → @register_prompt 데코레이터가 실행되어 _PROMPT_REGISTRY에 자동 등록
-from . import strategy_raw_stuffing  # noqa: F401
-from . import strategy_labeled_context  # noqa: F401
-from . import strategy_structured_context  # noqa: F401
-from . import strategy_compress_summarize  # noqa: F401
-from . import strategy_few_shot_envelope  # noqa: F401
 
 __all__ = ["PromptBuilder", "PromptResult"]

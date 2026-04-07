@@ -3,7 +3,90 @@
 ## 디렉토리 구조
 
 ```text
-
+RAG_Agent_Test/
+├── .env                          # 환경변수 (OPENAI_API_KEY 등, git 제외)
+├── .gitignore
+├── .python-version               # Python 3.13
+├── CLAUDE.md
+├── Dockerfile
+├── Makefile                      # lint / format / type-check 단축 명령
+├── README.md
+├── docker-compose.yml
+├── pyproject.toml
+├── pyrightconfig.json
+├── ruff.toml
+├── uv.lock
+├── configs/                      # Hydra 설정 그룹 (benchmark 실험용)
+│   ├── config.yaml               # 기본값 (serialization=kv_pairs, retrieval=top_k, prompt=raw_stuffing)
+│   ├── prompt/
+│   │   ├── compress_summarize.yaml
+│   │   ├── few_shot_envelope.yaml
+│   │   ├── labeled_context.yaml
+│   │   ├── raw_stuffing.yaml
+│   │   └── structured_context.yaml
+│   ├── retrieval/
+│   │   ├── hybrid.yaml
+│   │   ├── mmr.yaml
+│   │   ├── score_threshold.yaml
+│   │   └── top_k.yaml
+│   └── serialization/
+│       ├── dual.yaml
+│       ├── kv_pairs.yaml
+│       ├── narrative.yaml
+│       ├── raw.yaml
+│       ├── synthetic.yaml
+│       └── weighted.yaml
+├── data/
+│   ├── dev.csv                   # 평가용 질문 데이터
+│   └── train.csv                 # 벡터 DB 색인용 학습 데이터
+├── outputs/                      # benchmark 실험 결과 CSV/JSON (자동 생성)
+├── src/                          # 서버 & 에이전트 소스 루트
+│   ├── __init__.py
+│   ├── main.py                   # uvicorn 엔트리포인트
+│   ├── agent/                    # RAG 파이프라인 컴포넌트
+│   │   ├── chunker.py
+│   │   ├── data_loader.py
+│   │   ├── embedder/
+│   │   │   ├── _registry.py
+│   │   │   ├── embedder.py
+│   │   │   ├── strategy_dual_representation.py
+│   │   │   ├── strategy_field_weighted_kv.py
+│   │   │   ├── strategy_kv_pairs.py
+│   │   │   ├── strategy_narrativized_lite.py
+│   │   │   ├── strategy_raw.py
+│   │   │   └── strategy_synthetic_query_expansion.py
+│   │   ├── prompt_builder/
+│   │   │   ├── _registry.py
+│   │   │   ├── prompt_builder.py
+│   │   │   ├── strategy_compress_summarize.py
+│   │   │   ├── strategy_few_shot_envelope.py
+│   │   │   ├── strategy_labeled_context.py
+│   │   │   ├── strategy_raw_stuffing.py
+│   │   │   └── strategy_structured_context.py
+│   │   └── retriever/
+│   │       ├── _registry.py
+│   │       ├── retriever.py
+│   │       ├── strategy_hybrid.py
+│   │       ├── strategy_mmr.py
+│   │       ├── strategy_score_threshold.py
+│   │       └── strategy_top_k.py
+│   ├── app/                      # FastAPI 애플리케이션 레이어
+│   │   ├── server.py             # create_app 팩토리, lifespan
+│   │   ├── controller/
+│   │   │   ├── health_controller.py
+│   │   │   └── inference_controller.py
+│   │   ├── router/
+│   │   │   ├── health_router.py  # GET /health
+│   │   │   └── inference_router.py  # POST /
+│   │   ├── service/
+│   │   │   └── openai_service.py
+│   │   └── types/
+│   │       └── inference_dto.py
+│   └── config/
+│       └── config.py             # Settings 싱글턴 (환경변수 기반)
+└── test/
+    ├── benchmark.py              # Hydra 기반 단일 실험 실행
+    └── oaat_sweep.py             # One-Axis-At-a-Time 배치 실험
 ```
 
 ## 초기 Agent System 구축 및 평가 스크립트 실행 방법
@@ -124,6 +207,7 @@
 | C | Doc2Query | 문서별 pseudo-query를 생성해 색인 전 문서 확장 | 검색 recall 개선 가능 | 노이즈 query가 붙으면 역효과 가능 | document expansion 계열 대표 후보 |
 
 
+
 #### 구현 우선순위
 
 
@@ -148,7 +232,7 @@
 - 다만 노이즈 query가 성능을 해칠 수 있어 후순위
 
 
-
+---
 
 ### 260407_로컬FAISSVS Docker Qdrant
 
@@ -161,7 +245,7 @@
 로컬 FAISS(float 16) 채택, train.csv 크기가 그렇게까지 수천 row 수준이라, InMemory VectorDB 채용해도 괜찮겠다 판단.
 또한 실제 현업 RAG 프로덕션에서는 서버 비용과 연산 속도를 위해 float16이나 int8 Quantization까지 도입하며 약간의 Recall 하락을 감수하기도 하니, 괜찮다고 봄.
 
-
+---
 
 ### 260407_유사도 검색 고민
 
@@ -180,6 +264,8 @@
 3. 3차 개선: Top-k + MMR
 4. 4차 개선: Hybrid dense + sparse
 
+---
+
 ### 260407_LLM Prompt 방식 고민
 
 
@@ -193,11 +279,107 @@
 
 
 
-
+---
 
 ### 260407_실제 실험(훈련) 진행 순서
 
+#### 목적
 
+- baseline 1회 실행
+- 세 축 중 한 축만 변경하는 OAAT(One-At-A-Time) 1차 실험 수행
+- 결과를 CSV / JSON으로 자동 저장
+
+#### 실험 방식
+
+| 구분 | 내용 |
+| --- | --- |
+| 실험 방식 | OAAT (One-At-A-Time) |
+| baseline 실행 | 1회 |
+| 축별 실험 | serialization / retrieval / prompt 중 1개만 변경 |
+| 나머지 축 | baseline 고정 |
+| 목적 | 각 축이 성능에 미치는 영향 분리 확인 |
+| 결과 저장 | `outputs/oaat_sweep/`에 CSV, JSON 저장 |
+| 개별 run 저장 | `outputs/oaat_runs/` 하위 Hydra run dir 저장 |
+
+| 축 | baseline 값 |
+| --- | --- |
+| serialization | `kv_pairs` |
+| retrieval | `top_k` |
+| prompt | `raw_stuffing` |
+|  |  |
+
+#### 실행 결과 파싱 항목
+
+| 항목 | 설명 |
+| --- | --- |
+| `accuracy_pct` | 최종 정확도 |
+| `correct` | 정답 수 |
+| `total` | 전체 문항 수 |
+| `total_time_s` | 전체 소요 시간 |
+| `avg_time_s` | 문항당 평균 시간 |
+| `status` | 실행 성공 / 실패 상태 |
+
+#### 1차 실험 이후 진행 방식
+
+##### 1단계
+
+- baseline 결과 확인
+- 축별 최고 성능 후보 선별
+
+##### 2단계
+
+- baseline 갱신
+- 예: `kv_pairs + top_k + raw_stuffing` → `weighted + score_threshold + structured_context`
+
+##### 3단계
+
+- 하이퍼파라미터 튜닝 진행
+- 예:
+    - `top_k`의 `k`
+    - `score_threshold` 값
+    - `mmr`의 `lambda`
+    - `compress_summarize`의 `max_char`
+
+##### 4단계
+
+- 축별 상위 후보만 남겨 제한적 조합 실험 수행
+
+#### Stage 1 실험 기록표
+
+##### 전체 실험 요약표
+
+| 실험명 | axis | serialization | retrieval | prompt | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline | baseline | kv_pairs | top_k | raw_stuffing |  |  |  |  |  |  |
+| serialization__raw | serialization | raw | top_k | raw_stuffing |  |  |  |  |  |  |
+| serialization__narrative | serialization | narrative | top_k | raw_stuffing |  |  |  |  |  |  |
+| serialization__weighted | serialization | weighted | top_k | raw_stuffing |  |  |  |  |  |  |
+| serialization__dual | serialization | dual | top_k | raw_stuffing |  |  |  |  |  |  |
+| serialization__synthetic | serialization | synthetic | top_k | raw_stuffing |  |  |  |  |  |  |
+| retrieval__score_threshold | retrieval | kv_pairs | score_threshold | raw_stuffing |  |  |  |  |  |  |
+| retrieval__mmr | retrieval | kv_pairs | mmr | raw_stuffing |  |  |  |  |  |  |
+| retrieval__hybrid | retrieval | kv_pairs | hybrid | raw_stuffing |  |  |  |  |  |  |
+| prompt__compress_summarize | prompt | kv_pairs | top_k | compress_summarize |  |  |  |  |  |  |
+| prompt__few_shot_envelope | prompt | kv_pairs | top_k | few_shot_envelope |  |  |  |  |  |  |
+| prompt__labeled_context | prompt | kv_pairs | top_k | labeled_context |  |  |  |  |  |  |
+| prompt__structured_context | prompt | kv_pairs | top_k | structured_context |  |  |  |  |  |  |
+
+##### 축별 최고 후보 정리표
+
+| 축 | baseline | 최고 후보 | accuracy(%) | baseline 대비 변화 | 채택 여부 | 비고 |
+| --- | --- | --- | --- | --- | --- | --- |
+| serialization | kv_pairs |  |  |  |  |  |
+| retrieval | top_k |  |  |  |  |  |
+| prompt | raw_stuffing |  |  |  |  |  |
+
+
+
+
+---
+
+
+
+---
 
 ### 참고 자료 및 외부 조사
 

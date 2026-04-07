@@ -9,7 +9,8 @@
       "Bash(cat:*)",
       "Bash(xargs wc:*)",
       "Bash(rm src/agent/prompt_builder/strategy_citation_constrained.py src/agent/prompt_builder/strategy_position_optimized.py src/agent/prompt_builder/strategy_evidence_packet.py)",
-      "Bash(rm configs/prompt/citation_constrained.yaml configs/prompt/position_optimized.yaml configs/prompt/evidence_packet.yaml)"
+      "Bash(rm configs/prompt/citation_constrained.yaml configs/prompt/position_optimized.yaml configs/prompt/evidence_packet.yaml)",
+      "Bash(sed:*)"
     ]
   }
 }

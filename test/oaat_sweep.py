@@ -44,10 +44,16 @@ AXES: dict[str, list[str]] = {
 
 # ─── 결과 CSV 필드 순서 ──────────────────────────────────────
 _FIELDS = [
-    "name", "axis",
-    "serialization", "retrieval", "prompt",
-    "accuracy_pct", "correct", "total",
-    "total_time_s", "avg_time_s",
+    "name",
+    "axis",
+    "serialization",
+    "retrieval",
+    "prompt",
+    "accuracy_pct",
+    "correct",
+    "total",
+    "total_time_s",
+    "avg_time_s",
     "status",
 ]
 
@@ -67,11 +73,13 @@ def build_run_list(mode: str) -> list[dict]:
             if BASELINE[axis] == variant:
                 continue  # baseline과 동일 → 스킵
             cfg = {**BASELINE, axis: variant}
-            runs.append({
-                "name": f"{axis}__{variant}",
-                "axis": axis,
-                **cfg,
-            })
+            runs.append(
+                {
+                    "name": f"{axis}__{variant}",
+                    "axis": axis,
+                    **cfg,
+                }
+            )
 
     return runs
 
@@ -248,7 +256,7 @@ def main() -> None:
     print(f"OAAT Sweep  |  mode={args.mode}  |  총 {len(runs)}개 실험")
     print("=" * 60)
     print(f"{'#':<4} {'실험명':<35} {'축':<15}")
-    print(f"{'─'*4} {'─'*35} {'─'*15}")
+    print(f"{'─' * 4} {'─' * 35} {'─' * 15}")
     for i, r in enumerate(runs, 1):
         print(f"{i:<4} {r['name']:<35} {r['axis']:<15}")
 

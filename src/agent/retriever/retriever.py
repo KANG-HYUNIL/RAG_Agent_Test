@@ -1,8 +1,9 @@
+import logging
+from typing import Any
+
 import faiss
 import numpy as np
-from typing import List, Dict, Any, Optional
 from omegaconf import DictConfig
-import logging
 
 from ._registry import RETRIEVAL_STRATEGIES
 
@@ -23,7 +24,7 @@ class Retriever:
         self.index = faiss.IndexFlatIP(embedding_dim)
 
         # 원본 청크(문서 내용)를 식별하기 위해 인메모리 리스트로 유지합니다.
-        self.documents: List[Dict[str, Any]] = []
+        self.documents: list[dict[str, Any]] = []
 
         # Strategy 인스턴스화
         method_name = self.config.get("method", "top_k")
@@ -36,7 +37,9 @@ class Retriever:
         self.strategy = RETRIEVAL_STRATEGIES[method_name](self.config)
         log.info(f"Retriever Strategy '{method_name}' 초기화 완료.")
 
-    def add_documents(self, chunks: List[Dict[str, Any]], embeddings: List[List[float]]) -> None:
+    def add_documents(
+        self, chunks: list[dict[str, Any]], embeddings: list[list[float]]
+    ) -> None:
         """FAISS 벡터 DB 및 구조화 문서 추가"""
         if len(chunks) != len(embeddings):
             raise ValueError("chunks의 개수와 embeddings의 개수가 일치하지 않습니다.")
@@ -47,12 +50,12 @@ class Retriever:
         # 길이를 1로 정규화
         faiss.normalize_L2(embeddings_np)
 
-        self.index.add(embeddings_np)
+        self.index.add(embeddings_np)  # type: ignore[call-arg]
         self.documents.extend(chunks)
 
     def search(
-        self, query_embedding: List[float], top_k: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        self, query_embedding: list[float], top_k: int | None = None
+    ) -> list[dict[str, Any]]:
         """Registry 패턴으로 생성된 Strategy를 통해 검색"""
         if self.index.ntotal == 0:
             return []

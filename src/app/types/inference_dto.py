@@ -20,7 +20,9 @@ class InferenceRequest(BaseModel):
     query: str = Field(
         description="추론 대상 법률 객관식 문제 텍스트. 문제 본문과 선지(A/B/C/D)를 포함해야 합니다.",
         min_length=1,
-        examples=["다음 중 형사소송법상 증거능력이 없는 것은? A. ... B. ... C. ... D. ..."],
+        examples=[
+            "다음 중 형사소송법상 증거능력이 없는 것은? A. ... B. ... C. ... D. ..."
+        ],
     )
 
 

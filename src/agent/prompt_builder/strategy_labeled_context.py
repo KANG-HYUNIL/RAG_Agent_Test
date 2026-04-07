@@ -32,7 +32,9 @@ class LabeledContextPromptStrategy(BasePromptStrategy):
             text = " | ".join(f"{k}: {v}" for k, v in content.items() if v)
             context_parts.append(f"[참고자료 #{i}]\n{text}")
 
-        context_block = "\n\n".join(context_parts) if context_parts else "참고할 자료가 없습니다."
+        context_block = (
+            "\n\n".join(context_parts) if context_parts else "참고할 자료가 없습니다."
+        )
 
         choice_block = (
             f"A) {choices.get('A', '')}\n"

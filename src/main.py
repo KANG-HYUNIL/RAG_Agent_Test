@@ -24,7 +24,7 @@ def main() -> None:
     애플리케이션 설정(Settings)에서 호스트와 포트를 읽어
     uvicorn ASGI 서버를 시작합니다.
     """
-    # 애플리케이션 설정을 로드합니다. 
+    # 애플리케이션 설정을 로드합니다.
     settings = get_settings()
 
     # FastAPI 앱 인스턴스를 생성합니다.

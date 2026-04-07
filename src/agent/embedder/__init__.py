@@ -18,16 +18,16 @@ OpenAI text-embedding-3-small 호출 및 Registry 패턴 기반 전처리 전략
     from agent.embedder import Embedder
     from agent.embedder._registry import _PREPROCESS_REGISTRY, BasePreprocessStrategy, register_preprocess
 """
-from .embedder import Embedder
 
 # strategy_* 모듈 import → @register_preprocess 데코레이터가 실행되어 _PREPROCESS_REGISTRY에 자동 등록
 from . import (  # noqa: F401
-    strategy_raw,
+    strategy_dual_representation,
+    strategy_field_weighted_kv,
     strategy_kv_pairs,
     strategy_narrativized_lite,
-    strategy_field_weighted_kv,
-    strategy_dual_representation,
+    strategy_raw,
     strategy_synthetic_query_expansion,
 )
+from .embedder import Embedder
 
 __all__ = ["Embedder"]

@@ -1,4 +1,4 @@
-from ._registry import register_preprocess, BasePreprocessStrategy, _PREPROCESS_REGISTRY
+from ._registry import _PREPROCESS_REGISTRY, BasePreprocessStrategy, register_preprocess
 
 
 @register_preprocess("synthetic_query_expansion")
@@ -10,7 +10,12 @@ class SyntheticQueryExpansionPreprocessStrategy(BasePreprocessStrategy):
     """
 
     def process(self, row: dict) -> str:
-        base_text = _PREPROCESS_REGISTRY["kv_pairs"](openai_service=self.openai_service).process(row)
+        base_text = _PREPROCESS_REGISTRY["kv_pairs"](
+            openai_service=self.openai_service
+        ).process(row)
+        # kv_pairs 전략은 항상 str을 반환하므로 str로 단언
+        if not isinstance(base_text, str):
+            base_text = " ".join(base_text)
         if not self.openai_service:
             return base_text
 

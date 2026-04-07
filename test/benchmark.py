@@ -1,7 +1,7 @@
-import sys
-import os
 import io
 import logging
+import os
+import sys
 import time
 from datetime import datetime
 
@@ -14,16 +14,17 @@ src_path = os.path.join(project_root, "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
-import pandas as pd
-import hydra
-from omegaconf import DictConfig, OmegaConf
+import hydra  # noqa: E402
+import pandas as pd  # noqa: E402
+from omegaconf import DictConfig, OmegaConf  # noqa: E402
 
-from agent.data_loader import DataLoader
-from agent.chunker import Chunker
-from agent.embedder import Embedder
-from app.service.openai_service import OpenAIService
-from agent.retriever import Retriever
-from agent.prompt_builder import PromptBuilder
+from agent.chunker import Chunker  # noqa: E402
+from agent.data_loader import DataLoader  # noqa: E402
+from agent.embedder import Embedder  # noqa: E402
+from agent.prompt_builder import PromptBuilder  # noqa: E402
+from agent.retriever import Retriever  # noqa: E402
+from app.service.openai_service import OpenAIService  # noqa: E402
+from config.config import get_settings  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ def main(cfg: DictConfig) -> None:
     # ──────────────────────────────────────────────────────────
     data_loader = DataLoader()
     chunker = Chunker()
-    openai_service = OpenAIService()
+    openai_service = OpenAIService(settings=get_settings())
     embedder = Embedder(openai_service=openai_service)
     retriever = Retriever(config=cfg.retrieval, embedding_dim=1536)
     prompt_builder = PromptBuilder()
@@ -76,12 +77,16 @@ def main(cfg: DictConfig) -> None:
     chunks = chunker.chunk_data(train_rows)
     log.info(f"  -> {len(chunks)}개의 청크 구조화 완료.")
 
-    log.info(f"[3/4] 전처리 및 임베딩 텍스트 추출 중... (직렬화 전략: {cfg.serialization.method})")
+    log.info(
+        f"[3/4] 전처리 및 임베딩 텍스트 추출 중... (직렬화 전략: {cfg.serialization.method})"
+    )
     expand_chunks: list = []
     texts_to_embed: list[str] = []
 
     for chunk in chunks:
-        preprocessed = embedder.preprocess(chunk["content_dict"], method=cfg.serialization.method)
+        preprocessed = embedder.preprocess(
+            chunk["content_dict"], method=cfg.serialization.method
+        )
         if isinstance(preprocessed, list):
             for text in preprocessed:
                 expand_chunks.append(chunk.copy())
@@ -99,7 +104,9 @@ def main(cfg: DictConfig) -> None:
         batch_text = texts_to_embed[i : i + batch_size]
         batch_embeds = embedder.embed_batch(batch_text)
         all_embeddings.extend(batch_embeds)
-        log.info(f"  -> ({min(i + batch_size, len(texts_to_embed))} / {len(texts_to_embed)}) 임베딩 완료...")
+        log.info(
+            f"  -> ({min(i + batch_size, len(texts_to_embed))} / {len(texts_to_embed)}) 임베딩 완료..."
+        )
 
     retriever.add_documents(expand_chunks, all_embeddings)
     log.info(f"  -> 적재 완료! (총 인덱스 수: {retriever.index.ntotal})")
@@ -147,7 +154,7 @@ def main(cfg: DictConfig) -> None:
             retrieved_nodes = retriever.search(query_vector, top_k=top_k)
 
             # 3. 프롬프트 생성 — PromptResult(system_prompt, user_prompt) 반환
-            prompt_result  = prompt_builder.build_prompt(
+            prompt_result = prompt_builder.build_prompt(
                 method=prompt_method,
                 question=question,
                 choices=choices,
@@ -249,7 +256,9 @@ def main(cfg: DictConfig) -> None:
             }
         ]
     )
-    pd.concat([results_df, summary_row], ignore_index=True).to_csv(csv_path, index=False, encoding="utf-8-sig")
+    pd.concat([results_df, summary_row], ignore_index=True).to_csv(
+        csv_path, index=False, encoding="utf-8-sig"
+    )
 
     log.info(f"\n[✔] CSV 저장 완료: {csv_path}")
     log.info(f"[✔] 최종 정확도: {accuracy:.2f}%  ({correct_count}/{evaluated})")
