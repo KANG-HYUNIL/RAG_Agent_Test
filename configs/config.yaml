@@ -1,7 +1,7 @@
 defaults:
   - serialization: kv_pairs
   - retrieval: top_k
-  - prompt: few_shot
+  - prompt: raw_stuffing
   - _self_
 
 experiment_name: "default_benchmark"

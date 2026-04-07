@@ -8,6 +8,7 @@ class OpenAIService:
     설정된 API Key와 Model을 사용하여 텍스트 생성 및 임베딩을 수행합니다.
     """
     def __init__(self):
+        
         settings = get_settings()
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.chat_model = settings.openai_chat_model
@@ -30,6 +31,8 @@ class OpenAIService:
         return response.choices[0].message.content
 
     def get_embedding(self, text: str) -> list[float]:
+        # TODO : 임베딩 벡터 변환 전 전처리 전략을 여기에도 넣을건지 고민 및 확정 필요
+        
         """
         단일 텍스트의 임베딩 벡터를 반환합니다.
         """

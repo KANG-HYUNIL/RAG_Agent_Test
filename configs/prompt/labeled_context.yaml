@@ -1,0 +1,6 @@
+# @package _global_
+# 번호 라벨 부착 전달 전략
+# retrieved contexts에 [참고자료 #N] 번호 라벨을 붙여 구분하여 전달합니다.
+# 내용은 원문 그대로이며, 순서 재배치 없이 retrieval 레이어의 순서를 따릅니다.
+method: "labeled_context"
+description: "labeled_context: 번호 라벨 부착, 원문 전달 (경계 명확화)"

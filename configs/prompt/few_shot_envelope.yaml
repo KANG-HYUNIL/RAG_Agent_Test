@@ -1,0 +1,7 @@
+# @package _global_
+# Few-shot envelope 전략
+# retrieved contexts를 "질문-보기-정답" 형식의 Q&A 데모로 포맷팅합니다.
+# 데모를 통해 A/B/C/D 단독 출력 양식을 LLM에 시범 제시합니다.
+method: "few_shot_envelope"
+num_examples: 3
+description: "few_shot_envelope: retrieved 예시를 Q&A 데모로 포맷팅하여 출력 양식 고정"

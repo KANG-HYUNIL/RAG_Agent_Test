@@ -15,9 +15,9 @@
       ↓
 [query 임베딩 (text-embedding-3-small)]
       ↓
-[train.csv 벡터 DB에서 코사인 유사도 검색 → Top-K 유사 문제 추출]
+[train.csv 벡터 DB에서 코사인 유사도 검색]
       ↓
-[Few-shot Prompt 구성 (유사 문제+정답 예시 포함)]
+[Prompt 구성]
       ↓
 [gpt-4o-mini 추론]
       ↓
@@ -180,31 +180,24 @@
 3. 3차 개선: Top-k + MMR
 4. 4차 개선: Hybrid dense + sparse
 
-### 260407_LLM 전달 방식 고민
+### 260407_LLM Prompt 방식 고민
 
-
-| 방법 | 핵심 구조 | 시스템 / 사용자 prompt 설계 | 장점 | 단점 | 언제 쓰기 좋은가 | 근거 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 원문 그대로 stuffing | query와 retrieved chunk 원문을 순서대로 그대로 붙여 넣음 | system에는 역할·제약·근거 사용 규칙만 두고, user에는 질문 + retrieved docs block을 그대로 둠 | 구현 가장 단순, baseline으로 적합 | context가 길어질수록 noise와 position bias가 커짐 | 첫 실험, 기준선 확보 | RAG의 기본 형태는 retrieved docs를 prompt에 붙이는 방식이며, OpenAI는 system에 전역 지침, user에 작업 세부사항을 두라고 안내한다. ([OpenAI 개발자](https://developers.openai.com/api/docs/guides/prompting/?utm_source=chatgpt.com)) |
-| 구조화 evidence packet | retrieved docs를 문서 ID, 제목, 점수, 핵심 내용 같은 필드로 정리해 전달 | system에는 “필드 외 추론 금지 / 근거 없는 답변 금지”를 두고, user에는 질문 + Evidence 1..N 블록을 넣음 | 필드 경계가 명확해 파싱·디버깅 쉬움, 답변 형식 통제 쉬움 | 자연어 연속성이 약해질 수 있음 | 객관식, 정답/근거 추적이 중요한 과제 | OpenAI는 YAML/불릿 등 스캔하기 쉬운 구조와 Structured Outputs 사용을 권장한다. ([OpenAI 개발자](https://developers.openai.com/api/docs/guides/prompting/?utm_source=chatgpt.com)) |
-| 위치 최적화 ordering | 가장 중요한 근거를 앞이나 끝에 배치하고, 덜 중요한 근거를 중간에 둠 | system에는 “상위 근거 우선 사용” 규칙, user에는 relevance 순서가 드러나는 문서 배열 사용 | long context에서 핵심 정보 활용률을 높일 수 있음 | ordering 규칙이 잘못되면 오히려 성능 저하 가능 | retrieved docs가 여러 개이고 길이가 길 때 | Lost in the Middle은 관련 정보가 긴 컨텍스트의 중간에 있을 때 성능이 떨어질 수 있음을 보여준다. ([ACL Anthology](https://aclanthology.org/2024.tacl-1.9/?utm_source=chatgpt.com)) |
-| contextualized chunk | 각 chunk 앞에 짧은 설명문, 헤더, 출처 요약을 붙여 chunk 의미를 보강 | system에는 “설명문은 맥락용, 답은 원문 근거 기반” 규칙, user에는 `[context note] + raw chunk` 형태로 전달 | chunk가 단독으로도 의미를 가지기 쉬워짐 | 전처리 비용 증가, 부정확한 설명문이 노이즈가 될 수 있음 | chunk 단위 검색에서 문맥 손실이 큰 경우 | Anthropic의 Contextual Retrieval은 chunk 앞에 contextual information을 추가해 retrieval 정확도를 높이는 방법을 제안한다. ([Anthropic](https://www.anthropic.com/news/contextual-retrieval?utm_source=chatgpt.com)) |
-| compress / summarize then pass | retrieved docs를 그대로 넣지 않고, 추출 요약 또는 생성 요약으로 압축해 전달 | system에는 “요약된 evidence만 사용하되, 불확실하면 보수적으로 판단” 규칙, user에는 질문 + compressed evidence를 넣음 | 토큰 절감, long-context 부담 감소 | 압축 과정에서 근거 누락 또는 왜곡 위험 | 문서가 길고 비용/지연이 민감할 때 | RECOMP는 retrieved docs를 summary로 압축해 prepend하는 방식이 비용을 줄이고 성능을 유지 또는 개선할 수 있다고 보고한다. LongLLMLingua도 key information density를 높이는 압축의 효과를 제시한다. ([arXiv](https://arxiv.org/abs/2310.04408?utm_source=chatgpt.com)) |
-| selective augmentation | retrieval 결과가 약하거나 무관하면 일부 또는 전부를 아예 전달하지 않음 | system에는 “유의미한 근거가 없으면 근거 부족 상태로 답하라”를 두고, user에는 빈 evidence도 허용 | irrelevant context로 인한 오답 유발을 줄일 수 있음 | retrieval 품질 판단 로직이 필요함 | 애매한 query, 노이즈 retrieval이 많은 경우 | RECOMP는 irrelevant retrieval에 대해 empty string을 반환하는 selective augmentation을 포함한다. ([arXiv](https://arxiv.org/abs/2310.04408?utm_source=chatgpt.com)) |
-| multilingual normalization / translation | query와 retrieved docs의 언어를 맞추거나, 원문+번역문을 함께 전달 | system에는 “질문 언어/출력 언어/근거 언어 처리 규칙”을 두고, user에는 질문 + 원문 evidence + 필요 시 번역 evidence를 함께 제공 | 언어 불일치 문제를 줄일 수 있음 | 번역 품질이 낮으면 사실 왜곡 가능 | query 언어와 문서 언어가 다른 경우 | 다국어 RAG 연구는 query translation보다 multilingual retrieval이나 retrieved docs translation이 더 안정적일 수 있음을 보고했고, CrossRAG는 retrieved docs를 공통 언어로 번역해 generation에 전달하는 접근을 제안했다. ([arXiv](https://arxiv.org/html/2504.03616v1?utm_source=chatgpt.com)) |
-| few-shot answer envelope | system/user 안에 “질문-근거-정답 형식”의 소수 예시를 함께 넣어 응답 양식을 고정 | system에는 역할·판정 원칙, user에는 현재 질문 + retrieved evidence + 1~3개 예시를 넣음 | 객관식 답변 형식, 근거 인용 형식을 더 안정적으로 맞출 수 있음 | prompt 길이 증가 | 출력 형식 일관성이 중요한 경우 | OpenAI와 Azure 문서는 few-shot examples가 작업 형식과 답변 패턴을 고정하는 데 유용하다고 설명한다. ([OpenAI Help Center](https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api?utm_source=chatgpt.com)) |
-| citation-constrained structured answer | LLM 출력 자체를 `정답`, `근거 문서 ID`, `근거 요약` 같은 schema로 강제 | system에는 “반드시 지정 schema로 반환”을 두고, user에는 질문 + evidence packet을 넣음 | 평가, 디버깅, 근거 추적이 쉬움 | 모델 자유도가 줄어 자연어 답변 유연성 감소 | 객관식 채점, 자동 평가, 로그 분석이 중요한 경우 | OpenAI Structured Outputs는 JSON Schema를 강제해 enum, 필수 키 등을 안정적으로 제어할 수 있다고 설명한다. ([OpenAI 개발자](https://developers.openai.com/api/docs/guides/structured-outputs/?utm_source=chatgpt.com)) |
-
-
----
 
 #### 구축 및 실험 순서
 
 1. 원문 stuffing
-2. 구조화 evidence packet
-3. 위치 최적화 ordering
-4. compress / summarize then pass
-5. citation-constrained structured answer
+2. labeled_context
+3. structured_context
+4. compress_summarize
+5. few_shot_envelope
+
+
+
+
+
+### 260407_실제 실험(훈련) 진행 순서
+
+
 
 ### 참고 자료 및 외부 조사
 

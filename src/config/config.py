@@ -48,10 +48,7 @@ class Settings:
         default_factory=lambda: int(os.getenv("SERVER_PORT", "8000"))
     )
 
-    # RAG 검색 시 반환할 유사 문서 수 (기본값: 5)
-    rag_top_k: int = field(
-        default_factory=lambda: int(os.getenv("RAG_TOP_K", "5"))
-    )
+    # TODO : 나중에 Embedder, Retriever, PromptBuilder 각각 뭘 쓸건지도 관리 필요. 또한 특정 옵션 선택 시에 들어가는 값 뭐로 할지도.
 
 
 def _require_env(key: str) -> str:
