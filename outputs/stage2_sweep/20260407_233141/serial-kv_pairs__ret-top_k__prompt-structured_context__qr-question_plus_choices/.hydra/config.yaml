@@ -1,0 +1,23 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: top_k
+  top_k: 5
+  metric: IP
+  normalize_query: true
+prompt:
+  method: structured_context
+  description: 'structured_context: key-value 필드 구조화 전달 (score 의존 없음)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: question_plus_choices
+  description: 질문 텍스트 + 선택지 A~D를 결합하여 query 임베딩에 사용합니다.
+experiment_name: stage2__top_k__structured__qpc
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

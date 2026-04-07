@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=top_k
+- prompt=structured_context
+- query_representation=question_plus_choices
+- experiment_name=stage2__top_k__structured__qpc

@@ -1,0 +1,72 @@
+[
+  {
+    "name": "stage2__score_threshold__raw__qpc",
+    "axis": "stage2",
+    "serialization": "kv_pairs",
+    "retrieval": "score_threshold",
+    "prompt": "raw_stuffing",
+    "query_representation": "question_plus_choices",
+    "accuracy_pct": 55.21,
+    "correct": 143,
+    "total": 259,
+    "total_time_s": 428.83,
+    "avg_time_s": 1.656,
+    "status": "ok"
+  },
+  {
+    "name": "stage2__score_threshold__structured__qpc",
+    "axis": "stage2",
+    "serialization": "kv_pairs",
+    "retrieval": "score_threshold",
+    "prompt": "structured_context",
+    "query_representation": "question_plus_choices",
+    "accuracy_pct": 53.28,
+    "correct": 138,
+    "total": 259,
+    "total_time_s": 410.57,
+    "avg_time_s": 1.585,
+    "status": "ok"
+  },
+  {
+    "name": "stage2__top_k__structured__qpc",
+    "axis": "stage2",
+    "serialization": "kv_pairs",
+    "retrieval": "top_k",
+    "prompt": "structured_context",
+    "query_representation": "question_plus_choices",
+    "accuracy_pct": 53.28,
+    "correct": 138,
+    "total": 259,
+    "total_time_s": 399.75,
+    "avg_time_s": 1.543,
+    "status": "ok"
+  },
+  {
+    "name": "stage2__mmr__raw__qpc",
+    "axis": "stage2",
+    "serialization": "kv_pairs",
+    "retrieval": "mmr",
+    "prompt": "raw_stuffing",
+    "query_representation": "question_plus_choices",
+    "accuracy_pct": 53.28,
+    "correct": 138,
+    "total": 259,
+    "total_time_s": 375.54,
+    "avg_time_s": 1.45,
+    "status": "ok"
+  },
+  {
+    "name": "stage2__category_filter__raw__qpc",
+    "axis": "stage2",
+    "serialization": "kv_pairs",
+    "retrieval": "top_k_category_filter",
+    "prompt": "raw_stuffing",
+    "query_representation": "question_plus_choices",
+    "accuracy_pct": 52.9,
+    "correct": 137,
+    "total": 259,
+    "total_time_s": 424.32,
+    "avg_time_s": 1.638,
+    "status": "ok"
+  }
+]

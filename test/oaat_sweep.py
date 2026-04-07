@@ -14,13 +14,11 @@ oaat_sweep.py — One-At-A-Time (OAAT) Baseline + 단일 축 변경 실험 자�
 """
 
 import argparse
-import csv
-import json
 import os
-import re
-import subprocess
 import sys
 from datetime import datetime
+
+from sweep_utils import _FIELDS, print_summary_table, run_experiment, save_summary
 
 # ─── Baseline 정의 (config.yaml defaults와 일치) ──────────────
 BASELINE: dict[str, str] = {
@@ -54,21 +52,7 @@ AXES: dict[str, list[str]] = {
     ],
 }
 
-# ─── 결과 CSV 필드 순서 ──────────────────────────────────────
-_FIELDS = [
-    "name",
-    "axis",
-    "serialization",
-    "retrieval",
-    "prompt",
-    "query_representation",
-    "accuracy_pct",
-    "correct",
-    "total",
-    "total_time_s",
-    "avg_time_s",
-    "status",
-]
+__all__ = ["_FIELDS"]
 
 
 def build_run_list(mode: str) -> list[dict]:
@@ -93,163 +77,6 @@ def build_run_list(mode: str) -> list[dict]:
             )
 
     return runs
-
-
-def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
-    """
-    단일 실험을 subprocess로 실행하고 결과를 파싱하여 반환.
-
-    benchmark.py는 Hydra를 통해 실행되며,
-    hydra.run.dir 오버라이드로 각 실험의 출력 경로를 분리합니다.
-    """
-    name = run_cfg["name"]
-    folder_name = (
-        f"serial-{run_cfg['serialization']}"
-        f"__ret-{run_cfg['retrieval']}"
-        f"__prompt-{run_cfg['prompt']}"
-        f"__qr-{run_cfg['query_representation']}"
-    )
-    run_dir = os.path.join(hydra_root, folder_name)
-
-    cmd = [
-        sys.executable,
-        "test/benchmark.py",
-        f"serialization={run_cfg['serialization']}",
-        f"retrieval={run_cfg['retrieval']}",
-        f"prompt={run_cfg['prompt']}",
-        f"query_representation={run_cfg['query_representation']}",
-        f"experiment_name={name}",
-        f"hydra.run.dir={run_dir}",
-    ]
-
-    print(f"\n{'─' * 60}")
-    print(f"[RUN] {name}")
-    print(
-        f"      serial={run_cfg['serialization']}"
-        f"  retrieval={run_cfg['retrieval']}"
-        f"  prompt={run_cfg['prompt']}"
-        f"  qr={run_cfg['query_representation']}"
-    )
-    print(f"{'─' * 60}")
-
-    result: dict = {
-        "name": name,
-        "axis": run_cfg["axis"],
-        "serialization": run_cfg["serialization"],
-        "retrieval": run_cfg["retrieval"],
-        "prompt": run_cfg["prompt"],
-        "query_representation": run_cfg["query_representation"],
-        "accuracy_pct": None,
-        "correct": None,
-        "total": None,
-        "total_time_s": None,
-        "avg_time_s": None,
-        "status": "pending",
-    }
-
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        combined = proc.stdout + proc.stderr
-
-        # "[✔] 최종 정확도: 72.50%  (29/40)"
-        acc_m = re.search(r"최종 정확도:\s*([\d.]+)%\s*\((\d+)/(\d+)\)", combined)
-        if acc_m:
-            result["accuracy_pct"] = float(acc_m.group(1))
-            result["correct"] = int(acc_m.group(2))
-            result["total"] = int(acc_m.group(3))
-
-        # "[✔] 전체 소요 시간: 42.31s  |  평균 1.058s/문항"
-        time_m = re.search(r"전체 소요 시간:\s*([\d.]+)s", combined)
-        if time_m:
-            result["total_time_s"] = float(time_m.group(1))
-
-        avg_m = re.search(r"평균\s*([\d.]+)s/문항", combined)
-        if avg_m:
-            result["avg_time_s"] = float(avg_m.group(1))
-
-        if proc.returncode == 0:
-            result["status"] = "ok"
-        else:
-            result["status"] = f"error(rc={proc.returncode})"
-
-        # ── run.log 저장 (subprocess stdout+stderr 전체) ────
-        os.makedirs(run_dir, exist_ok=True)
-        log_path = os.path.join(run_dir, "run.log")
-        with open(log_path, "w", encoding="utf-8") as lf:
-            lf.write(combined)
-
-        # ── 진행 상황 출력 ──────────────────────────────────
-        if result["accuracy_pct"] is not None:
-            print(
-                f"[OK]  accuracy={result['accuracy_pct']:.2f}%"
-                f"  ({result['correct']}/{result['total']})"
-                f"  total={result['total_time_s']:.1f}s"
-                f"  avg={result['avg_time_s']:.3f}s/q"
-            )
-        else:
-            print(f"[WARN] 결과 파싱 실패. status={result['status']}")
-            if proc.returncode != 0:
-                tail = combined[-500:].strip()
-                print(f"--- STDERR tail ---\n{tail}\n---")
-
-    except Exception as exc:
-        result["status"] = f"exception:{exc}"
-        print(f"[ERROR] {exc}")
-
-    return result
-
-
-def print_summary_table(results: list[dict]) -> None:
-    """완료 후 콘솔 요약 테이블 출력."""
-    axis_order = {
-        "baseline": 0,
-        "serialization": 1,
-        "retrieval": 2,
-        "prompt": 3,
-        "query_representation": 4,
-    }
-    sorted_results = sorted(
-        results,
-        key=lambda r: (axis_order.get(r["axis"], 99), -(r["accuracy_pct"] or -1)),
-    )
-
-    header = f"{'축':<20} {'실험명':<40} {'정확도':>9} {'correct':>8} {'time(s)':>9}"
-    print(f"\n{'=' * 80}")
-    print("OAAT SWEEP 결과 요약")
-    print("=" * 80)
-    print(header)
-    print("─" * 80)
-    for r in sorted_results:
-        acc = f"{r['accuracy_pct']:.2f}%" if r["accuracy_pct"] is not None else "N/A"
-        correct = f"{r['correct']}/{r['total']}" if r["correct"] is not None else "N/A"
-        t = f"{r['total_time_s']:.1f}" if r["total_time_s"] is not None else "N/A"
-        print(f"{r['axis']:<20} {r['name']:<40} {acc:>9} {correct:>8} {t:>9}")
-    print("=" * 80)
-
-
-def save_summary(results: list[dict], output_dir: str) -> None:
-    """결과를 CSV + JSON으로 저장."""
-    os.makedirs(output_dir, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    json_path = os.path.join(output_dir, f"oaat_summary_{ts}.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-
-    csv_path = os.path.join(output_dir, f"oaat_summary_{ts}.csv")
-    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=_FIELDS)
-        writer.writeheader()
-        writer.writerows(results)
-
-    print(f"\n[SAVED] CSV  → {csv_path}")
-    print(f"[SAVED] JSON → {json_path}")
 
 
 def main() -> None:
@@ -306,7 +133,7 @@ def main() -> None:
 
     # ── 결과 출력 + 저장 ─────────────────────────────────────
     print_summary_table(results)
-    save_summary(results, sweep_dir)
+    save_summary(results, sweep_dir, prefix="oaat")
 
 
 if __name__ == "__main__":

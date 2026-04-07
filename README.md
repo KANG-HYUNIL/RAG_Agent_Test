@@ -399,7 +399,6 @@ RAG_Agent_Test/
 
 #### OAAT 실험 기록표 (총 13개)
 
-> 실행 명령: `python test/oaat_sweep.py --yes`
 
 ##### 전체 실험 요약표
 
@@ -440,13 +439,166 @@ RAG_Agent_Test/
 | 2차 우선 조합 후보 | `kv_pairs + score_threshold + raw_stuffing(or structured_context) + question_plus_choices` |
 
 
+---
 
+### 260407_제2차 실험 진행 순서
+
+#### 전제
+
+- 결과 저장 방식, 파싱 항목, 실행 방식은 1차 실험과 동일
+- 1차 실험 결과를 기준선으로 재사용하며, 이미 수행한 단일 축 실험은 반복하지 않음
+- 2차 실험에서는 `serialization`은 `kv_pairs`로 고정
+- `retrieval` 세부 하이퍼파라미터 튜닝은 3차 실험으로 이관
+
+#### 2차 실험 설계 원칙
+
+| 항목 | 내용 |
+| --- | --- |
+| 기준점 | 1차 실험 결과 재사용 |
+| 고정 축 | `serialization = kv_pairs` |
+| 핵심 조합 축 | `retrieval × prompt × query_representation` |
+| 우선 검증 대상 | `score_threshold`, `question_plus_choices`, `structured_context` |
+| 탐색 대상 | `mmr`, `top_k_category_filter`와 `question_plus_choices`의 상호작용 |
+| 제외 대상 | 1차에서 명확히 성능이 낮았던 `few_shot_envelope`, `labeled_context`는 제외 |
+
+#### 1차 결과 기반 해석
+
+| 축 | 1차 결론 | 2차 반영 |
+| --- | --- | --- |
+| serialization | `kv_pairs` 유지가 가장 합리적 | 고정 |
+| retrieval | `score_threshold`가 최고 성능 | 주력 후보 |
+| prompt | `structured_context`는 baseline과 동일, `few_shot_envelope`는 하락 | `raw_stuffing`, `structured_context`만 유지 |
+| query_representation | `question_plus_choices`가 전체 최고 | 핵심 결합 축 |
+
+
+
+#### 2차 실험 기록표
+
+| 실험명 | serialization | retrieval | prompt | query_repr | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
+| --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | --- | --- |
+| stage2__score_threshold__raw__qpc | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 55.21 | 143/259 | 428.8 | 1.656 | ok | 1차 최고 retrieval + 최고 query 조합 |
+| stage2__score_threshold__structured__qpc | kv_pairs | score_threshold | structured_context | question_plus_choices | 53.28 | 138/259 | 410.6 | 1.585 | ok | 주력 조합 후보 |
+| stage2__top_k__structured__qpc | kv_pairs | top_k | structured_context | question_plus_choices | 53.28 | 138/259 | 399.8 | 1.544 | ok | prompt 상호작용 확인 |
+| stage2__mmr__raw__qpc | kv_pairs | mmr | raw_stuffing | question_plus_choices | 53.28 | 138/259 | 375.5 | 1.450 | ok | retrieval 보조 후보 검증 |
+| stage2__category_filter__raw__qpc | kv_pairs | top_k_category_filter | raw_stuffing | question_plus_choices | 52.90 | 137/259 | 424.3 | 1.638 | ok | Category filtering 재평가 |
+
+#### 2차 실험 결과 해석
+
+| 항목 | 결과 | 해석 |
+| --- | --- | --- |
+| 2차 최고 조합 | `score_threshold + raw_stuffing + question_plus_choices` | 2차 내부 최고 성능 |
+| 2차 최고 정확도 | 55.21% (143/259) | 2차 조합 중 최고 |
+| 1차 최고 조합과 비교 | `top_k + raw_stuffing + question_plus_choices = 55.60%` | 2차 최고가 1차 최고보다 0.39%p 낮음 |
+| structured_context 결합 효과 | 53.28% | `question_plus_choices`와 결합해도 추가 이득 없음 |
+| mmr 결합 효과 | 53.28% | 1차 mmr(50.97%) 대비는 상승했지만 최고 조합은 아님 |
+| category_filter 결합 효과 | 52.90% | 1차 category_filter(50.97%) 대비는 상승했지만 최고 조합은 아님 |
+| 시간 효율 | `mmr + raw + qpc`가 375.5s로 가장 빠름 | 정확도는 최고는 아니지만 속도는 가장 양호 |
+
+#### 2차 실험에서 확인된 사실
+
+| 번호 | 확인된 사실 |
+| --- | --- |
+| 1 | `question_plus_choices`의 효과는 재확인됨. 2차 실험 전반에서 성능을 끌어올리는 핵심 축으로 보임. |
+| 2 | 1차에서 가장 좋았던 `score_threshold`는 `question_plus_choices`와 결합해도 소폭 개선은 있었지만, `top_k + raw_stuffing + question_plus_choices`를 넘지는 못함. |
+| 3 | `structured_context`는 1차와 마찬가지로 뚜렷한 이득을 보여주지 못함. 오히려 raw_stuffing보다 낮은 성능을 기록함. |
+| 4 | `mmr`는 단독 OAAT에서는 약했지만, `question_plus_choices`와 결합 시 53.28%까지 회복됨. 다만 최고 후보는 아님. |
+| 5 | `top_k_category_filter`도 `question_plus_choices`와 결합 시 성능이 일부 상승했지만, filtering 자체가 핵심 개선 축으로 보이진 않음. |
+| 6 | 현재까지 전체 최고 성능은 여전히 1차 실험의 `kv_pairs + top_k + raw_stuffing + question_plus_choices` 조합임. |
+
+
+#### 2차 실험 요약 문장
+
+- 2차 실험은 1차 OAAT에서 선별된 상위 후보들의 조합 효과를 검증하기 위해 수행함.
+- `question_plus_choices`는 여전히 가장 강한 개선 축으로 확인됨.
+- 그러나 `score_threshold`, `structured_context`, `category_filter`를 추가 결합하더라도 1차 최고 조합을 넘는 결과는 나오지 않음.
+- 따라서 3차 실험은 `kv_pairs + raw_stuffing + question_plus_choices`를 기준선으로 두고, retrieval 세부 파라미터(`top_k`, `threshold`)를 조정하는 방향이 적절함.
 
 
 
 ---
 
+#### 260408_제3차 실험 진행
 
+
+#### 전제
+
+- 결과 저장 방식, 파싱 항목, 실행 방식은 1차·2차 실험과 동일
+- 3차 실험은 retrieval 세부 하이퍼파라미터 튜닝 단계로 설정
+- 2차 실험 결과 기준, 조합 실험에서는 `score_threshold + question_plus_choices`가 유효했으나, 전체 최고 성능은 여전히 `top_k + raw_stuffing + question_plus_choices` 조합이 유지됨
+- 따라서 3차 실험의 기준선은 전체 최고 조합인 아래 설정으로 둠
+
+| 축 | 고정 값 | 비고 |
+| --- | --- | --- |
+| serialization | `kv_pairs` | 1차에서 최고 유지 |
+| retrieval | `top_k` 또는 `score_threshold` | 3차에서 세부 튜닝 |
+| prompt | `raw_stuffing` | 2차까지 기준선 유지 |
+| query_representation | `question_plus_choices` | 전체 최고 성능 축 |
+
+
+#### 3차 실험 설계 논리
+
+- `question_plus_choices`가 이미 가장 강한 축으로 확인되었으므로 query 표현은 더 이상 흔들지 않음
+- `raw_stuffing`이 `structured_context`보다 간단하고, 실제 조합 성능도 더 높았으므로 prompt도 고정
+- `score_threshold`는 1차 OAAT에서는 좋았지만, 2차 조합에서는 `top_k`를 넘지 못했음
+- 따라서 `score_threshold` 자체를 폐기하는 것이 아니라, 현재 threshold 값 `0.5`가 최적이 아닐 가능성을 검증해야 함
+- 동시에 `top_k`도 현재 `k=5`가 최적이라는 보장이 없으므로 함께 탐색함
+
+3차 실험은 retrieval 세부 하이퍼파라미터의 full factorial 탐색으로 정의함.
+
+
+탐색 파라미터:
+- `k ∈ {3, 5, 7, 10}`
+- `threshold ∈ {0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70}`
+
+총 실험 수:
+- 36개 (`4 × 9`)
+
+#### 3차 실험 기록표
+
+| 실험명 | serialization | retrieval | prompt | query_repr | k | threshold | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | --- |
+| stage3__k3__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.30 |  |  |  |  |  |  |
+| stage3__k3__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.35 |  |  |  |  |  |  |
+| stage3__k3__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.40 |  |  |  |  |  |  |
+| stage3__k3__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.45 |  |  |  |  |  |  |
+| stage3__k3__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
+| stage3__k3__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.55 |  |  |  |  |  |  |
+| stage3__k3__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.60 |  |  |  |  |  |  |
+| stage3__k3__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.65 |  |  |  |  |  |  |
+| stage3__k3__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.70 |  |  |  |  |  |  |
+| stage3__k5__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.30 |  |  |  |  |  |  |
+| stage3__k5__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.35 |  |  |  |  |  |  |
+| stage3__k5__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.40 |  |  |  |  |  |  |
+| stage3__k5__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.45 |  |  |  |  |  |  |
+| stage3__k5__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
+| stage3__k5__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.55 |  |  |  |  |  |  |
+| stage3__k5__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.60 |  |  |  |  |  |  |
+| stage3__k5__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.65 |  |  |  |  |  |  |
+| stage3__k5__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.70 |  |  |  |  |  |  |
+| stage3__k7__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.30 |  |  |  |  |  |  |
+| stage3__k7__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.35 |  |  |  |  |  |  |
+| stage3__k7__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.40 |  |  |  |  |  |  |
+| stage3__k7__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.45 |  |  |  |  |  |  |
+| stage3__k7__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
+| stage3__k7__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.55 |  |  |  |  |  |  |
+| stage3__k7__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.60 |  |  |  |  |  |  |
+| stage3__k7__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.65 |  |  |  |  |  |  |
+| stage3__k7__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.70 |  |  |  |  |  |  |
+| stage3__k10__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.30 |  |  |  |  |  |  |
+| stage3__k10__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.35 |  |  |  |  |  |  |
+| stage3__k10__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.40 |  |  |  |  |  |  |
+| stage3__k10__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.45 |  |  |  |  |  |  |
+| stage3__k10__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
+| stage3__k10__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.55 |  |  |  |  |  |  |
+| stage3__k10__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.60 |  |  |  |  |  |  |
+| stage3__k10__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.65 |  |  |  |  |  |  |
+| stage3__k10__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.70 |  |  |  |  |  |  |
+
+#### 3차 결과 요약표
+
+| best 실험명 | k | threshold | accuracy(%) | correct/total | total_time(s) | baseline 대비 변화 | 채택 여부 | 비고 |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | --- | --- |
+|  |  |  |  |  |  |  |  |  |
 
 ---
 

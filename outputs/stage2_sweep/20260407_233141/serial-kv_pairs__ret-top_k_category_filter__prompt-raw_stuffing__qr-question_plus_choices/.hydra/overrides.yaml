@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=top_k_category_filter
+- prompt=raw_stuffing
+- query_representation=question_plus_choices
+- experiment_name=stage2__category_filter__raw__qpc

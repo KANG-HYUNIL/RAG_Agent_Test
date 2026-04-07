@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=mmr
+- prompt=raw_stuffing
+- query_representation=question_plus_choices
+- experiment_name=stage2__mmr__raw__qpc

@@ -1,0 +1,6 @@
+﻿name,axis,serialization,retrieval,prompt,query_representation,accuracy_pct,correct,total,total_time_s,avg_time_s,status
+stage2__score_threshold__raw__qpc,stage2,kv_pairs,score_threshold,raw_stuffing,question_plus_choices,55.21,143,259,428.83,1.656,ok
+stage2__score_threshold__structured__qpc,stage2,kv_pairs,score_threshold,structured_context,question_plus_choices,53.28,138,259,410.57,1.585,ok
+stage2__top_k__structured__qpc,stage2,kv_pairs,top_k,structured_context,question_plus_choices,53.28,138,259,399.75,1.543,ok
+stage2__mmr__raw__qpc,stage2,kv_pairs,mmr,raw_stuffing,question_plus_choices,53.28,138,259,375.54,1.45,ok
+stage2__category_filter__raw__qpc,stage2,kv_pairs,top_k_category_filter,raw_stuffing,question_plus_choices,52.9,137,259,424.32,1.638,ok

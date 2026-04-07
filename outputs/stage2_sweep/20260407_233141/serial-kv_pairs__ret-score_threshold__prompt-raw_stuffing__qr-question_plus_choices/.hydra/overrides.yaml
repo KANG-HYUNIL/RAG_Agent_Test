@@ -1,0 +1,5 @@
+- serialization=kv_pairs
+- retrieval=score_threshold
+- prompt=raw_stuffing
+- query_representation=question_plus_choices
+- experiment_name=stage2__score_threshold__raw__qpc
