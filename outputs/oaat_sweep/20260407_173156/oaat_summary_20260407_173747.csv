@@ -1,0 +1,2 @@
+﻿name,axis,serialization,retrieval,prompt,accuracy_pct,correct,total,total_time_s,avg_time_s,status
+baseline,baseline,kv_pairs,top_k,raw_stuffing,48.26,125,259,332.41,1.283,ok

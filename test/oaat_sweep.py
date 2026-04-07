@@ -93,9 +93,9 @@ def run_experiment(run_cfg: dict, hydra_root: str) -> dict:
     """
     name = run_cfg["name"]
     folder_name = (
-        f"serial={run_cfg['serialization']}"
-        f"__ret={run_cfg['retrieval']}"
-        f"__prompt={run_cfg['prompt']}"
+        f"serial-{run_cfg['serialization']}"
+        f"__ret-{run_cfg['retrieval']}"
+        f"__prompt-{run_cfg['prompt']}"
     )
     run_dir = os.path.join(hydra_root, folder_name)
 

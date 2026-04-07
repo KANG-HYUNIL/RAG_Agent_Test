@@ -2,6 +2,7 @@ defaults:
   - serialization: kv_pairs
   - retrieval: top_k
   - prompt: raw_stuffing
+  - override hydra/job_logging: custom
   - _self_
 
 experiment_name: "default_benchmark"

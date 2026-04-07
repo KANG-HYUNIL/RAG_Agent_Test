@@ -1,0 +1,4 @@
+- serialization=kv_pairs
+- retrieval=top_k
+- prompt=raw_stuffing
+- experiment_name=baseline

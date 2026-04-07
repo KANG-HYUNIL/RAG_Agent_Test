@@ -1,0 +1,32 @@
+# Custom Hydra job_logging: UTF-8 file encoding + 서드파티 로거 억제
+version: 1
+formatters:
+  simple:
+    format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    formatter: simple
+    filename: ${hydra.runtime.output_dir}/${hydra.job.name}.log
+    encoding: utf-8
+root:
+  level: INFO
+  handlers: [console, file]
+loggers:
+  httpx:
+    level: WARNING
+    propagate: true
+  httpcore:
+    level: WARNING
+    propagate: true
+  faiss:
+    level: WARNING
+    propagate: true
+  openai:
+    level: WARNING
+    propagate: true
+disable_existing_loggers: false

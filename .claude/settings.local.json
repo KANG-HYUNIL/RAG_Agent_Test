@@ -17,7 +17,9 @@
       "Bash(echo \"lint exit: $?\")",
       "Bash(echo \"format exit: $?\")",
       "Bash(echo \"type-check exit: $?\")",
-      "Bash(grep -E \"\\\\.\\(yaml|py\\)$\")"
+      "Bash(grep -E \"\\\\.\\(yaml|py\\)$\")",
+      "Bash(python:*)",
+      "Bash(.venv/Scripts/python -c ':*)"
     ]
   }
 }

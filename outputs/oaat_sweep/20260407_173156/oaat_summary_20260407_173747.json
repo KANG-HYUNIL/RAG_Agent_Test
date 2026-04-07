@@ -1,0 +1,15 @@
+[
+  {
+    "name": "baseline",
+    "axis": "baseline",
+    "serialization": "kv_pairs",
+    "retrieval": "top_k",
+    "prompt": "raw_stuffing",
+    "accuracy_pct": 48.26,
+    "correct": 125,
+    "total": 259,
+    "total_time_s": 332.41,
+    "avg_time_s": 1.283,
+    "status": "ok"
+  }
+]

@@ -1,0 +1,14 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+retrieval:
+  method: top_k
+  top_k: 5
+  metric: IP
+  normalize_query: true
+prompt:
+  method: raw_stuffing
+  description: '원문 그대로 stuffing: retrieved chunks를 순서대로 그대로 붙여 전달 (baseline)'
+experiment_name: baseline
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
