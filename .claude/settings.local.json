@@ -16,7 +16,8 @@
       "Bash(make lint:*)",
       "Bash(echo \"lint exit: $?\")",
       "Bash(echo \"format exit: $?\")",
-      "Bash(echo \"type-check exit: $?\")"
+      "Bash(echo \"type-check exit: $?\")",
+      "Bash(grep -E \"\\\\.\\(yaml|py\\)$\")"
     ]
   }
 }
