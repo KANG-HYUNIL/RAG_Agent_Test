@@ -32,7 +32,9 @@ class RawStuffingPromptStrategy(BasePromptStrategy):
         for ctx in contexts:
             content = ctx.get("content_dict", {})
             raw_parts.append(
-                " | ".join(f"{k}: {v}" for k, v in content.items() if v and k not in excluded)
+                " | ".join(
+                    f"{k}: {v}" for k, v in content.items() if v and k not in excluded
+                )
             )
 
         context_block = (

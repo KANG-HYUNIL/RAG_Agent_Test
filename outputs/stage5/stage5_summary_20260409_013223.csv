@@ -1,0 +1,6 @@
+﻿실험명,retrieval,query_repr,accuracy(%),correct/total,avg_time(s/q),status,비고
+stage5__baseline__dense_qpc,score_threshold,question_plus_choices,54.83,142/259,1.473,COMPLETED,4차 최고 후보 재사용 (기준선)
+stage5__hybrid__qpc,hybrid,question_plus_choices,52.90,137/259,1.559,COMPLETED,BM25 결합 — dense-only 대비 exact match 보강 효과 확인
+stage5__dense__polarity_qpc,score_threshold,polarity_aware_qpc,52.12,135/259,1.566,COMPLETED,polarity 태그 추가 — query 재구성 단독 효과 확인
+stage5__hybrid__polarity_qpc,hybrid,polarity_aware_qpc,54.05,140/259,1.426,COMPLETED,retrieval 개선 + query 개선 동시 — 1순위 후보 조합
+stage5__hybrid__core_focus,hybrid,core_focus_query,48.26,125/259,1.294,COMPLETED,선택지 표면어 noise 완전 제거 — Kiwi 핵심명사 쿼리

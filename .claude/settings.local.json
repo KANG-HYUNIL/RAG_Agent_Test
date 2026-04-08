@@ -22,7 +22,12 @@
       "Bash(.venv/Scripts/python -c ':*)",
       "Bash(make type-check:*)",
       "Bash(uv pip:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(.venv/Scripts/python.exe -c \"import rank_bm25; print\\('ok'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import kiwipiepy; print\\('kiwi ok'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import rank_bm25; print\\('rank_bm25 ok'\\)\")",
+      "Bash(uv add:*)",
+      "Bash(.venv/Scripts/python.exe -c ':*)"
     ]
   }
 }

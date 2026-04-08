@@ -1,0 +1,6 @@
+﻿실험명,비고,Law correct/total,Law accuracy(%),Criminal Law correct/total,Criminal Law accuracy(%)
+stage5__baseline__dense_qpc,4차 최고 후보 재사용 (기준선),131/230,56.96,11/29,37.93
+stage5__hybrid__qpc,BM25 결합 — dense-only 대비 exact match 보강 효과 확인,128/230,55.65,9/29,31.03
+stage5__dense__polarity_qpc,polarity 태그 추가 — query 재구성 단독 효과 확인,128/230,55.65,7/29,24.14
+stage5__hybrid__polarity_qpc,retrieval 개선 + query 개선 동시 — 1순위 후보 조합,130/230,56.52,10/29,34.48
+stage5__hybrid__core_focus,선택지 표면어 noise 완전 제거 — Kiwi 핵심명사 쿼리,115/230,50.00,10/29,34.48

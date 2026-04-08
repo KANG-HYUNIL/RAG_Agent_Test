@@ -10,6 +10,10 @@ class KVPairsPreprocessStrategy(BasePreprocessStrategy):
     """
 
     def process(self, row: dict, exclude_fields: list[str] | None = None) -> str:
-        excluded = set(exclude_fields if exclude_fields is not None else ["answer", "Human Accuracy"])
+        excluded = set(
+            exclude_fields
+            if exclude_fields is not None
+            else ["answer", "Human Accuracy"]
+        )
         items = [f"{k}: {v}" for k, v in row.items() if k not in excluded]
         return " / ".join(items)

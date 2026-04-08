@@ -1,9 +1,9 @@
 import io
+import json
 import logging
 import os
 import sys
 import time
-import json
 from datetime import datetime
 
 import hydra
@@ -45,18 +45,18 @@ def _parse_prediction_label(text: str) -> str:
 
     if not text:
         return "ERR"
-    
+
     # 텍스트 내에서 처음으로 등장하는 A, B, C, D 중 하나를 찾습니다 (단독 문자이거나 괄호가 붙은 경우 등)
     # 예: "(A)", "A)", "Answer: A"
     match = re.search(r"\b([A-D])\b", text.upper())
     if match:
         return match.group(1)
-    
+
     # 만약 정규표현식으로 못 찾았다면 첫 글자가 A-D인지 확인
     first_char = text.strip()[:1].upper()
     if first_char in ["A", "B", "C", "D"]:
         return first_char
-        
+
     return "ERR"
 
 
@@ -71,28 +71,28 @@ def _format_retrieved_nodes(nodes: list, max_count: int, show_answer: bool) -> s
     """Retrieved nodes를 가독성 좋은 텍스트로 포맷팅합니다."""
     if not nodes:
         return "No contexts retrieved."
-    
+
     lines = []
     lines.append(f"[Retrieved Contexts] (Top {min(len(nodes), max_count)})")
     for i, node in enumerate(nodes[:max_count]):
         score = node.get("score", 0.0)
         content = node.get("content_dict", {})
         category = content.get("Category", "N/A")
-        
+
         lines.append("-" * 50)
-        lines.append(f"[{i+1}] Score: {score:.3f} | Category: {category}")
-        
+        lines.append(f"[{i + 1}] Score: {score:.3f} | Category: {category}")
+
         question = content.get("question", "")
         lines.append(f"Q: {question}")
-        
+
         choices = []
         for k in ["A", "B", "C", "D"]:
             if k in content:
                 choices.append(f"{k}: {content[k]}")
         lines.append(" | ".join(choices))
-        
+
         if show_answer and "answer" in content:
-             lines.append(f"Ans: {content['answer']}")
+            lines.append(f"Ans: {content['answer']}")
 
     lines.append("-" * 50)
     return "\n".join(lines)
@@ -220,11 +220,12 @@ def main(cfg: DictConfig) -> None:
     log_retrieved_contexts = bool(logging_cfg.get("log_retrieved_contexts", False))
     max_logged_contexts = int(logging_cfg.get("max_logged_contexts", 3))
     full_question_text = bool(logging_cfg.get("full_question_text", False))
-    only_log_errors_in_detail = bool(logging_cfg.get("only_log_errors_in_detail", False))
+    only_log_errors_in_detail = bool(
+        logging_cfg.get("only_log_errors_in_detail", False)
+    )
     show_answer_in_contexts = bool(logging_cfg.get("show_answer_in_contexts", False))
-    
+
     save_trace_file = bool(logging_cfg.get("save_trace_file", False))
-    trace_format = str(logging_cfg.get("trace_format", "jsonl")).lower()
     trace_include_answer = bool(logging_cfg.get("trace_include_answer_debug", False))
 
     retrieval_method = str(cfg.retrieval.get("method", "top_k"))
@@ -233,12 +234,6 @@ def main(cfg: DictConfig) -> None:
     trace_records: list[dict] = []
     correct_count = 0
     row_times: list[float] = []
-    
-    # 지표 집계용
-    hit_at_1_count = 0
-    hit_at_3_count = 0
-    hit_at_5_count = 0
-    category_results: list[dict] = []
 
     benchmark_start = time.perf_counter()  # ← 전체 소요 시간 측정 시작
 
@@ -263,7 +258,6 @@ def main(cfg: DictConfig) -> None:
         retrieved_nodes = []
         error_msg = ""
 
-
         try:
             # 1. 쿼리 텍스트 구성 및 임베딩
             query_text = build_query_text(
@@ -281,7 +275,10 @@ def main(cfg: DictConfig) -> None:
                 else None
             )
             retrieved_nodes = retriever.search(
-                query_vector, top_k=top_k, metadata_filter=metadata_filter
+                query_vector,
+                top_k=top_k,
+                metadata_filter=metadata_filter,
+                query_text=query_text,
             )
 
             # 3. 프롬프트 생성 — PromptResult(system_prompt, user_prompt) 반환
@@ -305,20 +302,8 @@ def main(cfg: DictConfig) -> None:
                 correct_count += 1
                 is_correct = True
 
-            # 6. Hit@k 계산 (지문을 기반으로 검색에서 동일한 문항이 나왔는지 확인)
-            norm_q = _normalize_text(question)
-            hits = []
-            for n in retrieved_nodes:
-                ctx_q = n.get("content_dict", {}).get("question", "")
-                hits.append(_normalize_text(ctx_q) == norm_q)
-            
-            is_hit_1 = any(hits[:1]) if len(hits) >= 1 else False
-            is_hit_3 = any(hits[:3]) if len(hits) >= 3 else False
-            is_hit_5 = any(hits[:5]) if len(hits) >= 5 else False
-            
-            if is_hit_1: hit_at_1_count += 1
-            if is_hit_3: hit_at_3_count += 1
-            if is_hit_5: hit_at_5_count += 1
+            # 6. Hit@k 계산 제거 (무의미한 지표로 판단되어 비활성화)
+            pass
 
         except Exception as e:
             error_msg = str(e)
@@ -336,23 +321,27 @@ def main(cfg: DictConfig) -> None:
         log_buffer = []
         log_buffer.append("=" * 50)
         log_buffer.append(f"[Benchmark Row #{idx + 1}]")
-        
+
         if verbose_query:
             log_buffer.append(f"[Query Original]\nQ: {question}")
             choices_str = " | ".join([f"{k}: {v}" for k, v in choices.items() if v])
             log_buffer.append(choices_str)
             log_buffer.append(f"\n[Query Embedded Text]\n{query_text}")
-        
+
         if log_retrieved_contexts:
             log_buffer.append("")
-            log_buffer.append(_format_retrieved_nodes(retrieved_nodes, max_logged_contexts, show_answer_in_contexts))
-            
+            log_buffer.append(
+                _format_retrieved_nodes(
+                    retrieved_nodes, max_logged_contexts, show_answer_in_contexts
+                )
+            )
+
         # Prompt Preview 삭제/축약 가능 (verbose일때만 일부)
         # Prediction Summary
         time_ms = f"{row_elapsed:.3f}s"
-        log_buffer.append(f"[Prediction Summary]")
-        log_buffer.append(f"-> GT: {answer_label} | Pred: {pred} | [{'O' if is_correct else 'X'}] 정답여부 (Time: {time_ms})")
-        log_buffer.append(f"-> Hit@1: {is_hit_1} | Hit@3: {is_hit_3} | Hit@5: {is_hit_5}")
+        log_buffer.append(
+            f"-> GT: {answer_label} | Pred: {pred} | [{'O' if is_correct else 'X'}] 정답여부 (Time: {time_ms})"
+        )
         if error_msg:
             log_buffer.append(f"ERROR: {error_msg}")
         log_buffer.append("=" * 50)
@@ -379,13 +368,10 @@ def main(cfg: DictConfig) -> None:
                 "Pred": pred,
                 "Correct": "O" if is_correct else "X",
                 "Category": str(row.get("Category", "N/A")),
-                "Hit@1": "O" if is_hit_1 else "X",
-                "Hit@3": "O" if is_hit_3 else "X",
-                "Hit@5": "O" if is_hit_5 else "X",
                 "Time(s)": round(row_elapsed, 3),
             }
         )
-        
+
         if save_trace_file:
             contexts_list = []
             for n in retrieved_nodes:
@@ -398,29 +384,28 @@ def main(cfg: DictConfig) -> None:
                     "A": content_dict.get("A", ""),
                     "B": content_dict.get("B", ""),
                     "C": content_dict.get("C", ""),
-                    "D": content_dict.get("D", "")
+                    "D": content_dict.get("D", ""),
                 }
                 if trace_include_answer:
                     context_dict["answer"] = content_dict.get("answer", "")
                 contexts_list.append(context_dict)
 
-            trace_records.append({
-                "row_index": idx + 1,
-                "category": str(row.get("Category", "")),
-                "question_original": question,
-                "query_embedded_text": query_text,
-                "gt_answer": answer_label,
-                "pred_answer": pred,
-                "correct": is_correct,
-                "latency_sec": row_elapsed,
-                "prompt_strategy": prompt_method,
-                "retrieval_method": retrieval_method,
-                "query_representation": query_repr_method,
-                "hit_at_1": is_hit_1,
-                "hit_at_3": is_hit_3,
-                "hit_at_5": is_hit_5,
-                "retrieved_contexts": contexts_list
-            })
+            trace_records.append(
+                {
+                    "row_index": idx + 1,
+                    "Category": str(row.get("Category", "")),
+                    "question_original": question,
+                    "query_embedded_text": query_text,
+                    "gt_answer": answer_label,
+                    "pred_answer": pred,
+                    "correct": is_correct,
+                    "latency_sec": row_elapsed,
+                    "prompt_strategy": prompt_method,
+                    "retrieval_method": retrieval_method,
+                    "query_representation": query_repr_method,
+                    "retrieved_contexts": contexts_list,
+                }
+            )
 
     total_elapsed = time.perf_counter() - benchmark_start  # ← 전체 소요 시간 측정 끝
 
@@ -434,9 +419,11 @@ def main(cfg: DictConfig) -> None:
     results_df = pd.DataFrame(records)
 
     # ── Category별 정확도 계산 ────────────────────────────
-    category_acc_df = results_df.groupby("Category")["Correct"].apply(
-        lambda x: (x == "O").mean() * 100
-    ).reset_index()
+    category_acc_df = (
+        results_df.groupby("Category")["Correct"]
+        .apply(lambda x: (x == "O").mean() * 100)
+        .reset_index()
+    )
     category_acc_df.columns = ["Category", "Accuracy(%)"]
     _print_table(category_acc_df, title="\n[Category-wise Accuracy]")
 
@@ -444,7 +431,6 @@ def main(cfg: DictConfig) -> None:
     log.info("SUMMARY STATISTICS")
     log.info("-" * 60)
     log.info(f"Total Accuracy: {accuracy:.2f}%")
-    log.info(f"Hit@1: {hit_at_1_count/evaluated*100:.2f}% | Hit@3: {hit_at_3_count/evaluated*100:.2f}% | Hit@5: {hit_at_5_count/evaluated*100:.2f}%")
     log.info(f"Total Time: {total_elapsed:.2f}s | Avg/Row: {avg_time:.3f}s")
     log.info("=" * 60)
 
@@ -475,19 +461,23 @@ def main(cfg: DictConfig) -> None:
     )
 
     log.info(f"\n[✔] CSV 저장 완료: {csv_path}")
-    
+
     if getattr(cfg, "logging", {}).get("save_trace_file", False) and trace_records:
-        trace_format_cfg = str(getattr(cfg, "logging", {}).get("trace_format", "jsonl")).lower()
+        trace_format_cfg = str(
+            getattr(cfg, "logging", {}).get("trace_format", "jsonl")
+        ).lower()
         if trace_format_cfg == "csv":
             trace_filename = f"benchmark_trace_{prompt_method}_{timestamp}.csv"
             trace_path = os.path.join(output_dir, trace_filename)
             trace_df = pd.DataFrame(trace_records)
             # CSV 형태일 때 리스트 형태를 JSON string으로 변환
             if "retrieved_contexts" in trace_df.columns:
-                trace_df["retrieved_contexts"] = trace_df["retrieved_contexts"].apply(lambda x: json.dumps(x, ensure_ascii=False))
+                trace_df["retrieved_contexts"] = trace_df["retrieved_contexts"].apply(
+                    lambda x: json.dumps(x, ensure_ascii=False)
+                )
             trace_df.to_csv(trace_path, index=False, encoding="utf-8-sig")
             log.info(f"[✔] CSV (Trace 로그) 저장 완료: {trace_path}")
-        else: # default jsonl
+        else:  # default jsonl
             trace_filename = f"benchmark_trace_{prompt_method}_{timestamp}.jsonl"
             trace_path = os.path.join(output_dir, trace_filename)
             with open(trace_path, "w", encoding="utf-8") as f:
@@ -499,28 +489,38 @@ def main(cfg: DictConfig) -> None:
     failed_trace = [r for r in trace_records if not r["correct"]]
     if failed_trace:
         # JSONL 저장
-        fail_jsonl_path = os.path.join(output_dir, f"errors_{prompt_method}_{timestamp}.jsonl")
+        fail_jsonl_path = os.path.join(
+            output_dir, f"errors_{prompt_method}_{timestamp}.jsonl"
+        )
         with open(fail_jsonl_path, "w", encoding="utf-8") as f:
             for rec in failed_trace:
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         log.info(f"[✔] 오답 JSONL 저장 완료: {fail_jsonl_path}")
 
         # Excel 저장 (pandas 활용)
-        fail_xlsx_path = os.path.join(output_dir, f"errors_{prompt_method}_{timestamp}.xlsx")
+        fail_xlsx_path = os.path.join(
+            output_dir, f"errors_{prompt_method}_{timestamp}.xlsx"
+        )
         try:
             # 엑셀 저장을 위해 분석하기 좋은 플랫한 구조로 변환
             failed_df = pd.DataFrame(failed_trace)
             # contexts는 너무 기므로 요약이나 제외 검토 (여기서는 문자열화)
             if "retrieved_contexts" in failed_df.columns:
-                failed_df["retrieved_contexts"] = failed_df["retrieved_contexts"].apply(lambda x: json.dumps(x, ensure_ascii=False))
-            
+                failed_df["retrieved_contexts"] = failed_df["retrieved_contexts"].apply(
+                    lambda x: json.dumps(x, ensure_ascii=False)
+                )
+
             failed_df.to_excel(fail_xlsx_path, index=False)
             log.info(f"[✔] 오답 Excel 저장 완료: {fail_xlsx_path}")
         except Exception as e:
             log.warning(f"[!] Excel 저장 실패 (openpyxl 설치 여부 확인 필요): {e}")
             # 대체제로 CSV 저장
-            fail_csv_path = os.path.join(output_dir, f"errors_{prompt_method}_{timestamp}.csv")
-            pd.DataFrame(failed_trace).to_csv(fail_csv_path, index=False, encoding="utf-8-sig")
+            fail_csv_path = os.path.join(
+                output_dir, f"errors_{prompt_method}_{timestamp}.csv"
+            )
+            pd.DataFrame(failed_trace).to_csv(
+                fail_csv_path, index=False, encoding="utf-8-sig"
+            )
             log.info(f"[✔] 대신 CSV로 오답 저장 완료: {fail_csv_path}")
 
     log.info(f"[✔] 최종 정확도: {accuracy:.2f}%  ({correct_count}/{evaluated})")

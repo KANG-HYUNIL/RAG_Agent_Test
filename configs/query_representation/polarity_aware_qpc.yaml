@@ -1,0 +1,2 @@
+method: polarity_aware_qpc
+description: "질문 + 선택지 A~D + polarity 방향 태그([부정방향]/[긍정방향]/[중립]) prefix. regex 기반 감지."

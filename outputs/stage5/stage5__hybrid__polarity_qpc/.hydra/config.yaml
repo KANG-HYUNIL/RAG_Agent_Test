@@ -1,0 +1,39 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: hybrid
+  top_k: 5
+  metric: IP
+  normalize_query: true
+  hybrid:
+    enabled: true
+    dense_top_k: 10
+    sparse_top_k: 10
+    fusion: rrf
+prompt:
+  method: raw_stuffing
+  description: '원문 그대로 stuffing: retrieved chunks를 순서대로 그대로 붙여 전달 (baseline)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: polarity_aware_qpc
+  description: 질문 + 선택지 A~D + polarity 방향 태그([부정방향]/[긍정방향]/[중립]) prefix. regex 기반
+    감지.
+experiment_name: stage5__hybrid__polarity_qpc
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+logging:
+  verbose_query: true
+  log_retrieved_contexts: true
+  max_logged_contexts: 3
+  full_question_text: true
+  only_log_errors_in_detail: false
+  show_answer_in_contexts: false
+  save_trace_file: true
+  trace_format: jsonl
+  trace_include_answer_debug: false

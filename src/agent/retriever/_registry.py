@@ -44,6 +44,12 @@ class BaseRetrievalStrategy:
         self.config = config
         self.top_k = config.get("top_k", 5)
 
+    def post_add_documents(self, documents: list[dict[str, Any]]) -> None:
+        """add_documents() 완료 후 호출되는 hook. 기본 구현은 no-op."""
+
+    def set_query_tokens(self, tokens: list[str]) -> None:
+        """search() 직전에 query 토큰을 주입하는 hook. 기본 구현은 no-op."""
+
     def search(
         self,
         index: _FaissIndex,

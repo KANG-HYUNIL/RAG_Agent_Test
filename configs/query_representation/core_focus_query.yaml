@@ -1,0 +1,2 @@
+method: core_focus_query
+description: "질문 핵심 법률 명사(Kiwi NNG/NNP) + polarity 태그. 선택지 없음(표면어 noise 제거 목적)."

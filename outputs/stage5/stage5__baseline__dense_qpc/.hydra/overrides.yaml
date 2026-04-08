@@ -1,0 +1,8 @@
+- serialization=kv_pairs
+- prompt=raw_stuffing
+- logging.save_trace_file=true
+- experiment_name=stage5__baseline__dense_qpc
+- retrieval=score_threshold
+- retrieval.top_k=5
+- retrieval.score_threshold.value=0.35
+- query_representation=question_plus_choices

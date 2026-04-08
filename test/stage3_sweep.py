@@ -82,7 +82,9 @@ def main() -> None:
 
     # ── 실행 계획 출력 ──────────────────────────────────────
     print(f"\n{'=' * 80}")
-    print(f"Stage3 Sweep  |  총 {len(runs)}개 실험  (k={_K_VALUES} × threshold={_THRESHOLD_VALUES})")
+    print(
+        f"Stage3 Sweep  |  총 {len(runs)}개 실험  (k={_K_VALUES} × threshold={_THRESHOLD_VALUES})"
+    )
     print(f"고정 축       |  {_FIXED}")
     print(f"출력 경로     |  {sweep_dir}")
     print("=" * 80)

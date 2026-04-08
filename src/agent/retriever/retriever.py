@@ -54,13 +54,24 @@ class Retriever:
         self.index.add(embeddings_np)
         self.documents.extend(chunks)
 
+        # strategy-level hook: hybrid 등 post-processing 필요 전략을 위해 호출
+        self.strategy.post_add_documents(self.documents)
+
     def search(
         self,
         query_embedding: list[float],
         top_k: int | None = None,
         metadata_filter: dict[str, str] | None = None,
+        query_text: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Registry 패턴으로 생성된 Strategy를 통해 검색 후 metadata_filter를 적용합니다."""
+        """Registry 패턴으로 생성된 Strategy를 통해 검색 후 metadata_filter를 적용합니다.
+
+        Args:
+            query_embedding: 임베딩 벡터 (float 리스트)
+            top_k:           검색 결과 수 오버라이드 (None이면 config 값 사용)
+            metadata_filter: category 필터 딕셔너리
+            query_text:      원본 쿼리 텍스트 (hybrid 전략의 BM25 검색에 사용)
+        """
         if self.index.ntotal == 0:
             return []
 
@@ -74,6 +85,12 @@ class Retriever:
         if self.config.get("normalize_query", True):
             faiss.normalize_L2(query_np)
 
+        # hybrid 전략 등 query_text가 필요한 전략에 토큰 주입
+        if query_text is not None:
+            from agent.utils.korean_tokenizer import tokenize_korean
+
+            self.strategy.set_query_tokens(tokenize_korean(query_text))
+
         results = self.strategy.search(self.index, self.documents, query_np)
 
         # ── Category post-filter ────────────────────────────────
@@ -82,7 +99,8 @@ class Retriever:
             query_category = metadata_filter.get("Category", "")
             if query_category:
                 filtered = [
-                    r for r in results
+                    r
+                    for r in results
                     if r.get("content_dict", {}).get("Category", "") == query_category
                 ]
                 min_results: int = int(cat_cfg.get("min_results", 1))
