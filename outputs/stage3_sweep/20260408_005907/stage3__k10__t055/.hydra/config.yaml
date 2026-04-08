@@ -1,0 +1,26 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: score_threshold
+  top_k: 10
+  metric: IP
+  normalize_query: true
+  score_threshold:
+    enabled: true
+    value: 0.55
+prompt:
+  method: raw_stuffing
+  description: '원문 그대로 stuffing: retrieved chunks를 순서대로 그대로 붙여 전달 (baseline)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: question_plus_choices
+  description: 질문 텍스트 + 선택지 A~D를 결합하여 query 임베딩에 사용합니다.
+experiment_name: stage3__k10__t055
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

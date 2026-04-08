@@ -90,7 +90,10 @@ RAG_Agent_Test/
 │       └── config.py             # Settings 싱글턴 (환경변수 기반)
 └── test/
     ├── benchmark.py              # Hydra 기반 단일 실험 실행
-    └── oaat_sweep.py             # One-Axis-At-a-Time 배치 실험 (4축 13개)
+    ├── oaat_sweep.py             # One-Axis-At-a-Time 배치 실험 (4축 13개)
+    ├── stage2_sweep.py           # 2차 조합 실험 자동화 (5개)
+    ├── stage3_sweep.py           # 3차 하이퍼파라미터 튜닝 (k×threshold, 36개)
+    └── sweep_utils.py            # OAAT / Stage2 / Stage3 공통 유틸리티
 ```
 
 ## 초기 Agent System 구축 및 평가 스크립트 실행 방법
@@ -557,48 +560,68 @@ RAG_Agent_Test/
 
 | 실험명 | serialization | retrieval | prompt | query_repr | k | threshold | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | --- |
-| stage3__k3__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.30 |  |  |  |  |  |  |
-| stage3__k3__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.35 |  |  |  |  |  |  |
-| stage3__k3__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.40 |  |  |  |  |  |  |
-| stage3__k3__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.45 |  |  |  |  |  |  |
-| stage3__k3__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
-| stage3__k3__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.55 |  |  |  |  |  |  |
-| stage3__k3__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.60 |  |  |  |  |  |  |
-| stage3__k3__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.65 |  |  |  |  |  |  |
-| stage3__k3__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.70 |  |  |  |  |  |  |
-| stage3__k5__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.30 |  |  |  |  |  |  |
-| stage3__k5__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.35 |  |  |  |  |  |  |
-| stage3__k5__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.40 |  |  |  |  |  |  |
-| stage3__k5__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.45 |  |  |  |  |  |  |
-| stage3__k5__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
-| stage3__k5__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.55 |  |  |  |  |  |  |
-| stage3__k5__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.60 |  |  |  |  |  |  |
-| stage3__k5__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.65 |  |  |  |  |  |  |
-| stage3__k5__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.70 |  |  |  |  |  |  |
-| stage3__k7__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.30 |  |  |  |  |  |  |
-| stage3__k7__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.35 |  |  |  |  |  |  |
-| stage3__k7__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.40 |  |  |  |  |  |  |
-| stage3__k7__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.45 |  |  |  |  |  |  |
-| stage3__k7__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
-| stage3__k7__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.55 |  |  |  |  |  |  |
-| stage3__k7__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.60 |  |  |  |  |  |  |
-| stage3__k7__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.65 |  |  |  |  |  |  |
-| stage3__k7__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.70 |  |  |  |  |  |  |
-| stage3__k10__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.30 |  |  |  |  |  |  |
-| stage3__k10__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.35 |  |  |  |  |  |  |
-| stage3__k10__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.40 |  |  |  |  |  |  |
-| stage3__k10__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.45 |  |  |  |  |  |  |
-| stage3__k10__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.50 |  |  |  |  |  | 현재 기본값 포함 |
-| stage3__k10__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.55 |  |  |  |  |  |  |
-| stage3__k10__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.60 |  |  |  |  |  |  |
-| stage3__k10__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.65 |  |  |  |  |  |  |
-| stage3__k10__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.70 |  |  |  |  |  |  |
+| stage3__k3__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.30 | 50.97 | 132/259 | 378.5 | 1.461 | ok |  |
+| stage3__k3__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.35 | 52.90 | 137/259 | 401.8 | 1.551 | ok |  |
+| stage3__k3__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.40 | 50.19 | 130/259 | 964.9 | 3.725 | ok |  |
+| stage3__k3__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.45 | 50.58 | 131/259 | 325.6 | 1.257 | ok |  |
+| stage3__k3__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.50 | 50.58 | 131/259 | 351.1 | 1.356 | ok | 현재 기본값 포함 |
+| stage3__k3__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.55 | 50.19 | 130/259 | 358.6 | 1.385 | ok |  |
+| stage3__k3__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.60 | 49.42 | 128/259 | 280.7 | 1.084 | ok |  |
+| stage3__k3__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.65 | 52.90 | 137/259 | 289.2 | 1.117 | ok |  |
+| stage3__k3__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 3 | 0.70 | 49.81 | 129/259 | 312.9 | 1.208 | ok |  |
+| stage3__k5__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.30 | 54.05 | 140/259 | 319.5 | 1.234 | ok |  |
+| stage3__k5__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.35 | 55.98 | 145/259 | 319.0 | 1.232 | ok |  |
+| stage3__k5__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.40 | 54.44 | 141/259 | 310.5 | 1.199 | ok |  |
+| stage3__k5__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.45 | 55.98 | 145/259 | 317.2 | 1.225 | ok |  |
+| stage3__k5__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.50 | 54.05 | 140/259 | 313.9 | 1.212 | ok | 현재 기본값 포함 |
+| stage3__k5__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.55 | 52.12 | 135/259 | 312.5 | 1.207 | ok |  |
+| stage3__k5__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.60 | 52.90 | 137/259 | 292.0 | 1.127 | ok |  |
+| stage3__k5__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.65 | 52.51 | 136/259 | 304.2 | 1.175 | ok |  |
+| stage3__k5__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 5 | 0.70 | 49.42 | 128/259 | 279.3 | 1.078 | ok |  |
+| stage3__k7__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.30 | 54.44 | 141/259 | 291.3 | 1.125 | ok |  |
+| stage3__k7__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.35 | 53.28 | 138/259 | 1773.9 | 6.849 | ok |  |
+| stage3__k7__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.40 | 53.28 | 138/259 | 2158.3 | 8.333 | ok |  |
+| stage3__k7__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.45 | 52.90 | 137/259 | 2176.8 | 8.405 | ok |  |
+| stage3__k7__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.50 | 50.97 | 132/259 | 2155.2 | 8.321 | ok | 현재 기본값 포함 |
+| stage3__k7__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.55 | 50.19 | 130/259 | 2048.4 | 7.909 | ok |  |
+| stage3__k7__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.60 | 52.51 | 136/259 | 2154.3 | 8.318 | ok |  |
+| stage3__k7__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.65 | 50.19 | 130/259 | 2155.8 | 8.324 | ok |  |
+| stage3__k7__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 7 | 0.70 | 45.95 | 119/259 | 2096.8 | 8.096 | ok |  |
+| stage3__k10__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.30 | 49.42 | 128/259 | 2095.7 | 8.092 | ok |  |
+| stage3__k10__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.35 | 50.19 | 130/259 | 2151.5 | 8.307 | ok |  |
+| stage3__k10__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.40 | 49.42 | 128/259 | 2144.9 | 8.281 | ok |  |
+| stage3__k10__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.45 | 48.26 | 125/259 | 2076.1 | 8.016 | ok |  |
+| stage3__k10__t050 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.50 | 49.81 | 129/259 | 2165.8 | 8.362 | ok | 현재 기본값 포함 |
+| stage3__k10__t055 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.55 | 49.42 | 128/259 | 2144.6 | 8.280 | ok |  |
+| stage3__k10__t060 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.60 | 48.26 | 125/259 | 2094.0 | 8.085 | ok |  |
+| stage3__k10__t065 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.65 | 47.88 | 124/259 | 2141.2 | 8.267 | ok |  |
+| stage3__k10__t070 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | 10 | 0.70 | 47.10 | 122/259 | 2093.4 | 8.083 | ok |  |
+
 
 #### 3차 결과 요약표
 
 | best 실험명 | k | threshold | accuracy(%) | correct/total | total_time(s) | baseline 대비 변화 | 채택 여부 | 비고 |
 | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | --- |
-|  |  |  |  |  |  |  |  |  |
+| stage3__k5__t045 | 5 | 0.45 | 55.98 | 145/259 | 317.2 | +0.38 | 우선 채택 | `stage3__k5__t035`와 공동 최고 성능, 시간은 소폭 더 짧음 |
+
+
+#### 실행 시간 이상치 관련 주석
+
+3차 실험의 일부 run에서는 `total_time(s)`가 비정상적으로 크게 측정되었다.  
+해당 현상은 retrieval 설정 자체의 문제라기보다, OpenAI API 호출 중 발생한 rate limit의 영향으로 판단하였다.
+
+- 명시적 `429 rate_limit_exceeded` 오류: 19건
+- 명시적 `400 invalid_request_error` 오류: 1건
+- 전체 평가 문항 수: 259개
+- `429` 발생 비율: `19 / 259 = 7.34%`
+- 전체 명시적 오류 비율: `20 / 259 = 7.72%`
+- 오류 로그 중 `429` 비율: `19 / 20 = 95%`
+
+따라서 일부 run의 비정상적으로 긴 실행 시간은 실험 설정의 본질적 성능 차이로 보기 어렵고,  
+외부 API rate limit에 의해 오염된 latency 지표로 해석하였다.
+
+
+
 
 ---
 

@@ -45,13 +45,7 @@ def run_experiment(
                      예: ["retrieval.top_k=3", "retrieval.score_threshold.value=0.30"]
     """
     name = run_cfg["name"]
-    folder_name = (
-        f"serial-{run_cfg['serialization']}"
-        f"__ret-{run_cfg['retrieval']}"
-        f"__prompt-{run_cfg['prompt']}"
-        f"__qr-{run_cfg['query_representation']}"
-    )
-    run_dir = os.path.join(hydra_root, folder_name)
+    run_dir = os.path.join(hydra_root, name)
 
     cmd = [
         sys.executable,
