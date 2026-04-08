@@ -2,9 +2,20 @@ defaults:
   - serialization: kv_pairs
   - retrieval: top_k
   - prompt: raw_stuffing
-  - query_representation: question_only
+  - query_representation: question_plus_choices
   - override hydra/job_logging: custom
   - _self_
 
 experiment_name: "default_benchmark"
 output_dir: "./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}"
+
+logging:
+  verbose_query: true
+  log_retrieved_contexts: true
+  max_logged_contexts: 3
+  full_question_text: true
+  only_log_errors_in_detail: false
+  show_answer_in_contexts: false
+  save_trace_file: true
+  trace_format: "jsonl"
+  trace_include_answer_debug: false

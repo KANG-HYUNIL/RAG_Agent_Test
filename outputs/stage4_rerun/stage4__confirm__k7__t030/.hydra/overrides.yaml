@@ -1,0 +1,7 @@
+- serialization=kv_pairs
+- prompt=raw_stuffing
+- query_representation=question_plus_choices
+- experiment_name=stage4__confirm__k7__t030
+- retrieval=score_threshold
+- retrieval.top_k=7
+- retrieval.score_threshold.value=0.30

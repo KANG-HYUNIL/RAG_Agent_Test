@@ -520,7 +520,7 @@ RAG_Agent_Test/
 
 ---
 
-#### 260408_제3차 실험 진행
+### 260408_제3차 실험 진행
 
 
 #### 전제
@@ -602,28 +602,95 @@ RAG_Agent_Test/
 
 | best 실험명 | k | threshold | accuracy(%) | correct/total | total_time(s) | baseline 대비 변화 | 채택 여부 | 비고 |
 | --- | ---: | ---: | ---: | --- | ---: | ---: | --- | --- |
-| stage3__k5__t045 | 5 | 0.45 | 55.98 | 145/259 | 317.2 | +0.38 | 우선 채택 | `stage3__k5__t035`와 공동 최고 성능, 시간은 소폭 더 짧음 |
+| stage3__k5__t045 | 5 | 0.45 | 55.98 | 145/259 | 317.2 | +0.38 | 우선 채택 | `stage3__k5__t035`와 공동 최고 성능, 시간은 더 짧음 |
 
 
-#### 실행 시간 이상치 관련 주석
+#### 시간 이상치 및 Rate Limit 로그 정리
 
-3차 실험의 일부 run에서는 `total_time(s)`가 비정상적으로 크게 측정되었다.  
-해당 현상은 retrieval 설정 자체의 문제라기보다, OpenAI API 호출 중 발생한 rate limit의 영향으로 판단하였다.
+해당 장시간 run 로그 기준으로, 실행 시간 급증의 주된 원인은 retrieval 설정 자체보다 OpenAI API rate limit(`429`) 영향으로 판단함.
 
-- 명시적 `429 rate_limit_exceeded` 오류: 19건
-- 명시적 `400 invalid_request_error` 오류: 1건
-- 전체 평가 문항 수: 259개
-- `429` 발생 비율: `19 / 259 = 7.34%`
-- 전체 명시적 오류 비율: `20 / 259 = 7.72%`
-- 오류 로그 중 `429` 비율: `19 / 20 = 95%`
+| 항목 | 값 |
+| --- | ---: |
+| 전체 평가 문항 수 | 259 |
+| 명시적 `429 rate_limit_exceeded` | 19건 |
+| 명시적 `400 invalid_request_error` | 1건 |
+| 전체 명시적 오류 수 | 20건 |
+| 전체 문항 대비 `429` 비율 | 7.34% |
+| 전체 문항 대비 전체 오류 비율 | 7.72% |
+| 명시적 오류 중 `429` 비율 | 95.00% |
 
-따라서 일부 run의 비정상적으로 긴 실행 시간은 실험 설정의 본질적 성능 차이로 보기 어렵고,  
-외부 API rate limit에 의해 오염된 latency 지표로 해석하였다.
-
-
-
+해석:
+- 장시간 run에서 발생한 명시적 오류의 대부분은 `429 rate_limit_exceeded`였음.
+- 따라서 일부 실험의 비정상적으로 긴 `total_time(s)`는 모델/설정 고유의 latency라기보다, 외부 API rate limit에 의해 오염된 시간 지표로 해석하는 것이 타당함.
+- 정확도 비교는 참고 가능하나, 시간 비교는 rate limit 영향이 적은 run 위주로 해석하는 것이 적절함.
 
 ---
+
+### 260408_제4차 실험(4차-1 Clean Confirmation) 진행 순서
+
+#### 전제
+
+- 결과 저장 방식, 파싱 항목, 실행 방식은 1차~3차 실험과 동일
+- 3차 실험에서 일부 run은 API rate limit 영향으로 시간 지표가 오염되었으므로, 4차-1은 상위 후보를 다시 검증하는 clean confirmation 단계로 정의
+- 4차-1의 목적은 새로운 하이퍼파라미터 탐색이 아니라, 상위 후보들의 정확도와 category별 성능을 안정적으로 재확인하는 것
+- hit@k 분석, 오답 수작업 분류도 진행 시도
+
+#### 목적
+
+- 3차 상위 후보의 정확도를 clean rerun으로 재검증
+- `Law` / `Criminal Law` category별 성능 차이를 확인
+- retrieval trace를 기반으로 hit@k를 계산할 수 있는 분석용 산출물 확보
+- 상위 후보에 대해 오류 유형을 분류할 수 있는 기반 마련
+
+#### 4차-1 실험 설계 원칙
+
+| 항목 | 내용 |
+| --- | --- |
+| 목적 | 상위 후보의 clean rerun 및 category별 성능 확인 |
+| 기준점 | 3차 최고 후보 + 기존 강한 기준선 |
+| 고정 축 | `serialization = kv_pairs`, `prompt = raw_stuffing`, `query_representation = question_plus_choices` |
+| 비교 대상 | `score_threshold` 상위 threshold, `top_k` 기준선 |
+| 성공 기준 | 최고 정확도 재현 여부, category별 편차 확인 |
+| 보조 기준 | rate limit 없는 조건에서 시간 재확인 |
+| 추가 측정 | `Law` / `Criminal Law` category별 accuracy, 오답 확인 및 hitk검증 |
+
+#### 4차-1 실험군
+
+| 실험명 | serialization | retrieval | prompt | query_repr | 세부 설정 | 목적 | 우선순위 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| stage4__confirm__k5__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | `k=5, threshold=0.35` | 3차 공동 최고 재검증 | 최우선 |
+| stage4__confirm__k5__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | `k=5, threshold=0.45` | 3차 공동 최고 재검증 | 최우선 |
+| stage4__confirm__topk__k5 | kv_pairs | top_k | raw_stuffing | question_plus_choices | `k=5` | 기존 강한 기준선 재검증 | 최우선 |
+| stage4__confirm__k5__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | `k=5, threshold=0.40` | 최적점 주변 안정성 확인 | 우선 |
+| stage4__confirm__k5__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | `k=5, threshold=0.30` | 느슨한 cutoff 재검증 | 우선 |
+| stage4__confirm__k7__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices | `k=7, threshold=0.30` | 높은 정확도 후보의 시간 오염 재확인 | 탐색 |
+
+#### 4차-1 실험 기록표
+
+| 실험명 | serialization | retrieval | prompt | query_repr | accuracy(%) | correct/total | total_time(s) | avg_time(s/q) | status | 비고 |
+| --- | --- | --- | --- | --- | ---: | --- | ---: | ---: | --- | --- |
+| stage4__confirm__k5__t035 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices |  |  |  |  |  | 3차 공동 최고 |
+| stage4__confirm__k5__t045 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices |  |  |  |  |  | 3차 공동 최고 |
+| stage4__confirm__topk__k5 | kv_pairs | top_k | raw_stuffing | question_plus_choices |  |  |  |  |  | 기존 강한 기준선 |
+| stage4__confirm__k5__t040 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices |  |  |  |  |  | 최적점 주변 |
+| stage4__confirm__k5__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices |  |  |  |  |  | 느슨한 cutoff |
+| stage4__confirm__k7__t030 | kv_pairs | score_threshold | raw_stuffing | question_plus_choices |  |  |  |  |  | 시간 오염 재확인 |
+
+
+#### 4차-1 Category별 정확도 기록표
+
+| 실험명 | Law correct/total | Law accuracy(%) | Criminal Law correct/total | Criminal Law accuracy(%) | 비고 |
+| --- | --- | ---: | --- | ---: | --- |
+| stage4__confirm__k5__t035 |  |  |  |  |  |
+| stage4__confirm__k5__t045 |  |  |  |  |  |
+| stage4__confirm__topk__k5 |  |  |  |  |  |
+| stage4__confirm__k5__t040 |  |  |  |  |  |
+| stage4__confirm__k5__t030 |  |  |  |  |  |
+| stage4__confirm__k7__t030 |  |  |  |  |  |
+
+
+
+
 
 ### 참고 자료 및 외부 조사
 
