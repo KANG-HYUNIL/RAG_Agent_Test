@@ -50,7 +50,30 @@ class Settings:
         default_factory=lambda: int(os.getenv("SERVER_PORT", "8000"))
     )
 
-    # TODO : 나중에 Embedder, Retriever, PromptBuilder 각각 뭘 쓸건지도 관리 필요. 또한 특정 옵션 선택 시에 들어가는 값 뭐로 할지도.
+    # RAG 검색 전략 선택 (configs/retrieval/*.yaml)
+    rag_retrieval_strategy: str = field(
+        default_factory=lambda: os.getenv("RAG_RETRIEVAL_STRATEGY", "top_k")
+    )
+
+    # RAG 프롬프트 전략 선택 (configs/prompt/*.yaml)
+    rag_prompt_strategy: str = field(
+        default_factory=lambda: os.getenv("RAG_PROMPT_STRATEGY", "raw_stuffing")
+    )
+
+    # RAG 질의 표현 전략 선택 (configs/query_representation/*.yaml)
+    rag_query_representation_strategy: str = field(
+        default_factory=lambda: os.getenv("RAG_QUERY_REPR_STRATEGY", "question_plus_choices")
+    )
+
+    # RAG 직렬화 전략 선택 (configs/serialization/*.yaml)
+    rag_serialization_strategy: str = field(
+        default_factory=lambda: os.getenv("RAG_SERIALIZATION_STRATEGY", "kv_pairs")
+    )
+
+    # RAG 추가 설정 (Hydra override 형식, 쉼표로 구분)
+    rag_extra_overrides: str = field(
+        default_factory=lambda: os.getenv("RAG_EXTRA_OVERRIDES", "")
+    )
 
 
 def _require_env(key: str) -> str:

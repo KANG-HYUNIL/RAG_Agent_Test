@@ -51,5 +51,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# uvicorn으로 직접 실행 (PYTHONPATH=/app/src 이므로 app.server 가 /app/src/app/server.py 로 해석)
-CMD ["uvicorn", "app.server:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+# 메인 모듈을 통해 실행하여 main.py의 설정 초기화 로직이 작동하도록 함
+# PYTHONPATH=/app/src 설정이 되어 있으므로 src.main 으로 접근 가능합니다.
+CMD ["python", "-m", "main"]

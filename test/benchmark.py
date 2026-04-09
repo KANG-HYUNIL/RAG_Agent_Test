@@ -78,9 +78,21 @@ def _format_retrieved_nodes(nodes: list, max_count: int, show_answer: bool) -> s
         score = node.get("score", 0.0)
         content = node.get("content_dict", {})
         category = content.get("Category", "N/A")
+        
+        # 리랭킹 보정 지표 추출 (Stage 7 감사용)
+        stats = node.get("rerank_stats", {})
+        stats_str = ""
+        if stats:
+            # S: Statute, P: Polarity, C: Choice
+            parts = []
+            if stats.get("S", 1.0) != 1.0: parts.append(f"S:{stats['S']}")
+            if stats.get("P", 1.0) != 1.0: parts.append(f"P:{stats['P']}")
+            if stats.get("C", 1.0) != 1.0: parts.append(f"C:{stats['C']}")
+            if parts:
+                stats_str = f" | Stats: {{{', '.join(parts)}}}"
 
         lines.append("-" * 50)
-        lines.append(f"[{i + 1}] Score: {score:.3f} | Category: {category}")
+        lines.append(f"[{i + 1}] Score: {score:.3f} | Category: {category}{stats_str}")
 
         question = content.get("question", "")
         lines.append(f"Q: {question}")

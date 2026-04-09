@@ -43,7 +43,12 @@ from typing import Any
 import numpy as np
 from omegaconf import DictConfig
 
-from agent.utils.korean_tokenizer import detect_polarity, extract_core_tokens, tokenize_korean
+from agent.utils.korean_tokenizer import (
+    detect_polarity,
+    extract_core_tokens,
+    extract_statute_names,
+    tokenize_korean,
+)
 
 from ._registry import BaseRetrievalStrategy, _FaissIndex, register_strategy
 
@@ -294,6 +299,176 @@ class PostRetrievalRerankStrategy(BaseRetrievalStrategy):
         for doc_idx, adj_score in adjusted[:effective_final_k]:
             doc_info = documents[doc_idx].copy()
             doc_info["score"] = adj_score
+            results.append(doc_info)
+
+        return results
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage7RerankStrategy (Conservative Deterministic Reranking)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@register_strategy("rerank_stage7")
+class Stage7RerankStrategy(BaseRetrievalStrategy):
+    """Stage 7: 보수적 결정론적 리랭킹 전략.
+
+    특징:
+    - 법령명 불일치(Conflict/Missing)에 대한 Soft Penalty (곱연산)
+    - 질문-문서 극성 불일치에 대한 Soft Penalty (곱연산)
+    - 선택지 고유 키워드(Choice Unique)에 대한 Small Bonus (곱연산)
+    - 추가 LLM/Embedding 없이 Regex와 Set 연산만 사용
+    """
+
+    def __init__(self, config: DictConfig) -> None:
+        super().__init__(config)
+        st_cfg = config.get("score_threshold", {})
+        self.threshold: float = float(st_cfg.get("value", 0.35))
+        self.metric: str = str(config.get("metric", "IP"))
+
+        rk_cfg = config.get("rerank", {})
+        self.retrieve_k: int = int(rk_cfg.get("retrieve_k", 10))
+        self.final_k: int = int(rk_cfg.get("final_k", self.top_k))
+
+        # 페널티/보너스 계수 (Config에서 조절 가능하도록 기본값 설정)
+        self.penalty_conflict: float = float(rk_cfg.get("penalty_conflict", 0.85))
+        self.penalty_missing: float = float(rk_cfg.get("penalty_missing", 0.95))
+        self.penalty_polarity: float = float(rk_cfg.get("penalty_polarity", 0.95))
+        self.bonus_choice: float = float(rk_cfg.get("bonus_choice", 1.02))
+
+        # 런타임 캐시
+        self._doc_statutes: list[set[str]] = []
+        self._doc_polarities: list[str] = []
+        self._doc_token_sets: list[set[str]] = []
+
+        # Query 메타
+        self._query_statutes: set[str] = set()
+        self._query_polarity: str = "중립"
+        self._query_choice_unique_tokens: set[str] = set()
+
+        log.info(
+            f"[Stage7Rerank] retrieve_k={self.retrieve_k}, final_k={self.final_k}, "
+            f"Statute({self.penalty_conflict}/{self.penalty_missing}), "
+            f"Polarity({self.penalty_polarity}), ChoiceBonus({self.bonus_choice})"
+        )
+
+    def post_add_documents(self, documents: list[dict[str, Any]]) -> None:
+        """문서 추가 시 법령명, 극성, 전체 토큰 셋을 캐시합니다."""
+        log.info(f"[Stage7Rerank] 문서 메타 데이터 빌드 중 ({len(documents)}개)...")
+        self._doc_statutes = []
+        self._doc_polarities = []
+        self._doc_token_sets = []
+
+        for doc in documents:
+            content_dict = doc.get("content_dict", {})
+            question = str(content_dict.get("question", ""))
+
+            # 1. 법령명 추출
+            self._doc_statutes.append(extract_statute_names(question))
+
+            # 2. 극성 감지 (질문 필드 기준)
+            self._doc_polarities.append(detect_polarity(question))
+
+            # 3. 전체 토큰 셋 (Choice Bonus용)
+            all_text = " ".join([question,
+                                 str(content_dict.get("A", "")),
+                                 str(content_dict.get("B", "")),
+                                 str(content_dict.get("C", "")),
+                                 str(content_dict.get("D", ""))])
+            self._doc_token_sets.append(set(tokenize_korean(all_text)))
+
+        log.info("[Stage7Rerank] 문서 메타 데이터 빌드 완료.")
+
+    def set_query_text(self, text: str) -> None:
+        """질문 원문에서 법령명, 극성, 선택지 고유 키워드를 분석합니다."""
+        # 1. 법령명 및 극성
+        self._query_statutes = extract_statute_names(text)
+        self._query_polarity = detect_polarity(text)
+
+        # 2. 선택지 고유 키워드 추출
+        # 패턴: 질문 본문 + 선택지 구분자(①, ②, ③, ④ 또는 A, B, C, D)
+        # 본문과 선택지를 대략적으로 분리 (선택지 구분자 이후를 선택지로 간주)
+        choice_markers = ["①", "②", "③", "④", "A)", "B)", "C)", "D)", "1.", "2.", "3.", "4."]
+        q_part = text
+        c_part = ""
+
+        first_marker_pos = len(text)
+        for m in choice_markers:
+            pos = text.find(m)
+            if pos != -1 and pos < first_marker_pos:
+                first_marker_pos = pos
+
+        if first_marker_pos < len(text):
+            q_part = text[:first_marker_pos]
+            c_part = text[first_marker_pos:]
+
+        q_tokens = set(extract_core_tokens(q_part))
+        c_tokens = set(extract_core_tokens(c_part))
+
+        # 선택지에만 등장하는 토큰 (Unique Choice Terms)
+        self._query_choice_unique_tokens = c_tokens - q_tokens
+
+    def search(
+        self,
+        index: _FaissIndex,
+        documents: list[dict[str, Any]],
+        query_np: np.ndarray,
+    ) -> list[dict[str, Any]]:
+        """보수적 리랭킹 로직 적용."""
+        actual_k = min(self.retrieve_k, max(index.ntotal, 1))
+        distances, indices = index.search(query_np, actual_k)
+
+        adjusted: list[tuple[int, float]] = []
+        for dist, idx in zip(distances[0], indices[0], strict=False):
+            if idx == -1 or idx >= len(documents):
+                continue
+
+            base_score = float(dist)
+            # Threshold 미달 시 제외 (IP 기준)
+            if self.metric == "IP" and base_score < self.threshold:
+                continue
+
+            adj = base_score
+            # 감사(Audit) 기록용 딕셔너리
+            stats = {"S": 1.0, "P": 1.0, "C": 1.0}
+
+            # 1. Statute Mismatch Penalty (곱연산)
+            doc_statutes = self._doc_statutes[idx]
+            if self._query_statutes:
+                if doc_statutes:
+                    # 교집합이 없으면 Conflict
+                    if not (self._query_statutes & doc_statutes):
+                        adj *= self.penalty_conflict
+                        stats["S"] = self.penalty_conflict
+                else:
+                    # 쿼리에는 있는데 문서에는 없으면 Missing
+                    adj *= self.penalty_missing
+                    stats["S"] = self.penalty_missing
+
+            # 2. Polarity Penalty (곱연산)
+            doc_pol = self._doc_polarities[idx]
+            if (self._query_polarity != "중립" and
+                doc_pol != "중립" and
+                self._query_polarity != doc_pol):
+                adj *= self.penalty_polarity
+                stats["P"] = self.penalty_polarity
+
+            # 3. Choice Unique Bonus (곱연산)
+            if self._query_choice_unique_tokens:
+                doc_tokens = self._doc_token_sets[idx]
+                if self._query_choice_unique_tokens & doc_tokens:
+                    adj *= self.bonus_choice
+                    stats["C"] = self.bonus_choice
+
+            adjusted.append((int(idx), adj, stats))
+
+        # 재정렬 및 결과 구성
+        adjusted.sort(key=lambda x: x[1], reverse=True)
+        results: list[dict[str, Any]] = []
+        for doc_idx, adj_score, stats in adjusted[:self.final_k]:
+            doc_info = documents[doc_idx].copy()
+            doc_info["score"] = adj_score
+            doc_info["rerank_stats"] = stats
             results.append(doc_info)
 
         return results

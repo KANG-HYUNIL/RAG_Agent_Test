@@ -211,6 +211,68 @@ def _register_legal_compounds(kiwi: Kiwi) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Statute Matching Constants (Stage 7 고정 데이터)
+# ─────────────────────────────────────────────────────────────────────────────
+
+STATUTE_WHITELIST: frozenset[str] = frozenset({
+    "헌법", "민법", "형법", "형사소송법", "민사소송법", "상법", "행정소송법",
+    "행정절차법", "행정심판법", "행정대집행법", "행정기본법", "행정조사기본법",
+    "공직선거법", "청원경찰법", "경비업법", "경찰관직무집행법", "경찰공무원법",
+    "소방기본법", "소방시설공사업법", "위험물안전관리법", "근로기준법", "최저임금법",
+    "노동관계조정법", "국가배상법", "국가공무원법", "지방자치법", "고용보험법",
+    "산업재해보상보험법", "사회보장기본법", "변호사법", "소년법", "국제사법",
+    "건축법", "출입국관리법", "전자정부법", "국가재정법", "도로교통법", "정당법",
+    "국민연금법", "국민기초생활보장법", "지방공무원법", "공직자윤리법", "국적법",
+    "군인사법", "소방공무원법", "외국법자문사법", "개인정보보호법", "도시및주거환경정비법",
+    "의료법", "법원조직법", "병역법", "식품위생법", "공무원연금법", "문화재보호법",
+    "관세법", "약사법", "교통안전법", "하천법", "주차장법", "국유재산법", "감사원법",
+    "통신비밀보호법", "질서위반행위규제법", "사회복지사업법", "고등교육법", "유아교육법",
+    "초중등교육법", "영유아보육법", "청소년보호법", "청소년활동진흥법", "선박법",
+    "국세징수법", "도시계획법", "성폭력범죄의처벌등에관한특례법", "공유토지분할에관한특례법",
+    "전통시장및상점가육성을위한특별법", "지뢰피해자지원에관한특별법", "국세기본법",
+    "특정범죄 가중처벌 등에 관한 법률", "특정경제범죄 가중처벌 등에 관한 법률",
+    "폭력행위 등 처벌에 관한 법률", "부정수표 단속법", "성매매알선 등 행위의 처벌에 관한 법률",
+    "아동·청소년의 성보호에 관한 법률", "가족관계의 등록 등에 관한 법률",
+})
+
+STATUTE_ALIAS_TO_CANONICAL: dict[str, str] = {
+    "특가법": "특정범죄 가중처벌 등에 관한 법률",
+    "특경법": "특정경제범죄 가중처벌 등에 관한 법률",
+    "폭처법": "폭력행위 등 처벌에 관한 법률",
+    "성매매처벌법": "성매매알선 등 행위의 처벌에 관한 법률",
+    "아청법": "아동·청소년의 성보호에 관한 법률",
+    "공직선거법상": "공직선거법", "경비업법상": "경비업법", "경비업법령상": "경비업법",
+    "청원경찰법상": "청원경찰법", "청원경찰법령상": "청원경찰법", "근로기준법상": "근로기준법",
+    "행정심판법상": "행정심판법", "행정절차법상": "행정절차법", "행정소송법상": "행정소송법",
+    "행정대집행법상": "행정대집행법", "행정기본법상": "행정기본법", "행정조사기본법상": "행정조사기본법",
+    "국가배상법상": "국가배상법", "국가공무원법상": "국가공무원법", "지방자치법상": "지방자치법",
+    "고용보험법령상": "고용보험법", "사회보장기본법상": "사회보장기본법", "최저임금법상": "최저임금법",
+    "소년법상": "소년법", "변호사법상": "변호사법", "국민연금법상": "국민연금법",
+    "지방공무원법상": "지방공무원법", "국적법상": "국적법", "군인사법상": "군인사법",
+    "소방공무원법상": "소방공무원법", "의료법상": "의료법", "출입국관리법상": "출입국관리법",
+    "도로교통법상": "도로교통법", "건축법상": "건축법",
+}
+
+NON_STATUTE_LEGAL_TERMS: frozenset[str] = frozenset({
+    "불법행위", "손해배상", "손해배상청구권", "소멸시효", "재량행위", "기속행위",
+    "취소소송", "행정행위", "행정처분", "행정법", "형사법", "국제법", "공법", "사법",
+    "특별법", "일반법", "성문법", "관습법", "실체법", "절차법", "실정법", "하위법",
+    "모법", "신법", "구법", "조약법", "해양법", "국내법", "외국법", "국제관습법",
+    "법률시행령", "직무집행법", "위임입법", "행정입법", "죄형법정주의",
+})
+
+# 매칭용 정규화 맵 및 리스트
+# 공백이 제거된 키 -> 원본 키(또는 Canonical)
+_STATUTE_NORM_TO_CANONICAL: dict[str, str] = {}
+for s in STATUTE_WHITELIST:
+    _STATUTE_NORM_TO_CANONICAL[s.replace(" ", "")] = s
+for alias, canonical in STATUTE_ALIAS_TO_CANONICAL.items():
+    _STATUTE_NORM_TO_CANONICAL[alias.replace(" ", "")] = canonical
+
+# 정렬된 정규화 키 리스트 (longest matching용)
+_SORTED_NORM_KEYS = sorted(_STATUTE_NORM_TO_CANONICAL.keys(), key=len, reverse=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 품사 필터 & Stopwords
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -495,3 +557,45 @@ def extract_core_tokens(question: str) -> list[str]:
         tokens.append(form)
 
     return tokens
+
+
+def extract_statute_names(text: str) -> set[str]:
+    """
+    텍스트에서 법령명을 추출하여 정규화된 셋으로 반환합니다.
+
+    규칙:
+    1. 텍스트 normalization (공백 제거, 특수기호 통일, 괄호 제거 등)
+    2. STATUTE_ALIAS_TO_CANONICAL longest-match 매칭
+    3. STATUTE_WHITELIST longest-match 매칭
+    4. NON_STATUTE_LEGAL_TERMS 제외
+
+    Args:
+        text: 분석할 텍스트
+
+    Returns:
+        정규화된 법령명 집합
+    """
+    if not text or not text.strip():
+        return set()
+
+    # 1. Normalization
+    normalized = text.replace(" ", "")
+    normalized = normalized.replace("·", "").replace("⋅", "").replace("･", "")
+    normalized = normalized.replace('"', "").replace("'", "").replace("“", "").replace("”", "")
+    normalized = normalized.replace("(", "").replace(")", "").replace("[", "").replace("]", "")
+
+    # 2. Matching (Longest Match using normalized keys)
+    target = normalized
+    found_canonicals: set[str] = set()
+
+    for norm_key in _SORTED_NORM_KEYS:
+        if norm_key in target:
+            canonical = _STATUTE_NORM_TO_CANONICAL[norm_key]
+            found_canonicals.add(canonical)
+            # 매칭된 부분은 제거하여 중복 매칭 방지
+            target = target.replace(norm_key, " ")
+
+    # 3. Exclusion of NON_STATUTE_LEGAL_TERMS
+    final_statutes = {s for s in found_canonicals if s not in NON_STATUTE_LEGAL_TERMS}
+
+    return final_statutes

@@ -35,19 +35,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # --- 서버 시작 시 실행 ---
     print("[startup] RAG Agent 서버가 시작됩니다.")
 
-    # TODO: 전략 레지스트리 기반 RAG 파이프라인 초기화
-    #   (DataLoader → Chunker → Embedder → Retriever → FAISS 색인)
-    #   전략 설정 방식 결정 후 여기에 구현 예정.
-    #   실제 파이프라인 초기화 시 app.state.ready = True 를 초기화 완료 후로 이동할 것.
+    from config.config import get_settings
+    from agent.agent_core import LegalRAGAgent
 
-    app.state.ready = True  # 초기화 완료 → /health 가 200 반환
-    print("[startup] 초기화 완료.")
+    try:
+        settings = get_settings()
+        # RAG 파이프라인(DataLoader, Retriever, Index 등) 초기화
+        app.state.agent = LegalRAGAgent(settings=settings)
+        app.state.ready = True
+        print(f"[startup] 초기화 완료. (전략: {settings.rag_retrieval_strategy} / {settings.rag_prompt_strategy})")
+    except Exception as e:
+        app.state.ready = False
+        print(f"[startup] 초기화 실패: {e}")
+        raise e
 
     yield
 
     # --- 서버 종료 시 실행 ---
     app.state.ready = False
-    # TODO: 리소스 정리(벡터 스토어 클리어 등) 추가 예정
     print("[shutdown] RAG Agent 서버가 종료됩니다.")
 
 

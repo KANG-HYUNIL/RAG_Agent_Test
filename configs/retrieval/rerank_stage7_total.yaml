@@ -1,0 +1,27 @@
+# configs/retrieval/rerank_stage7_total.yaml
+# Stage 7: Conservative Deterministic Reranking (Total Combination)
+# 법령명 매칭 + 극성 매칭 + 선택지 고유 키워드 보너스
+
+method: rerank_stage7
+top_k: 5
+metric: "IP"
+normalize_query: true
+
+# 리트리벌 단계에서 카테고리 필터링 사용 여부
+category_filter:
+  enabled: true
+  min_results: 1
+  fallback: "relax"
+
+# 리랭킹 세부 설정
+rerank:
+  retrieve_k: 10          # 1차 dense retrieval 후보 수
+  final_k: 5             # 최종적으로 LLM에 전달할 후보 수
+  penalty_conflict: 0.85 # 법령명 명시적 불일치 시 감점
+  penalty_missing: 0.95  # 쿼리엔 법령명이 있으나 문서엔 없을 때 감점
+  penalty_polarity: 0.95 # 질문-문서 극성(긍정/부정) 불일상 시 감점
+  bonus_choice: 1.02     # 선택지 고유 키워드가 문서에 포함된 경우 가산
+
+# 스코어 임계값 (정규화된 IP 기준)
+score_threshold:
+  value: 0.35

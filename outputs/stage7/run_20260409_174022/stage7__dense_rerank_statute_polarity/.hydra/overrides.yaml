@@ -1,0 +1,7 @@
+- serialization=kv_pairs
+- prompt=raw_stuffing
+- logging.save_trace_file=true
+- experiment_name=stage7__dense_rerank_statute_polarity
+- retrieval=rerank_stage7_total
+- retrieval.rerank.bonus_choice=1.0
+- query_representation=question_plus_choices

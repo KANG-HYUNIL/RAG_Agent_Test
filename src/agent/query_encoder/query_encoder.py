@@ -20,6 +20,7 @@ _VALID_METHODS = frozenset(
         "question_plus_choices",
         "polarity_aware_qpc",
         "core_focus_query",
+        "stage7_suffix_polarity",
     }
 )
 
@@ -55,6 +56,9 @@ def build_query_text(
 
     if method == "core_focus_query":
         return _build_core_focus_query(question)
+
+    if method == "stage7_suffix_polarity":
+        return _build_stage7_suffix_polarity(question, choices)
 
     raise ValueError(
         f"Unknown query_representation method: '{method}'. "
@@ -117,5 +121,23 @@ def _build_core_focus_query(question: str) -> str:
     if core_tokens:
         return f"[{polarity_tag}] {' '.join(core_tokens)}"
 
-    # fallback: Kiwi 실패 시 question 원문 그대로
-    return f"[{polarity_tag}] {question}"
+# ─────────────────────────────────────────────────────────────────────────────
+# stage7_suffix_polarity
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _build_stage7_suffix_polarity(question: str, choices: dict[str, str]) -> str:
+    """
+    question_plus_choices 뒤에 자연어 형태의 polarity 가이드를 접미사(suffix)로 추가합니다.
+    (5차 polarity_aware_qpc가 prefix [부정방향] 식인 것과 대조적)
+
+    구성: "{question} {choice_str} --- 위 질문은 [{polarity_tag}]에 해당하며, 관련 법령 및 판례와 대조하여 가장 적절한 선택지를 선정해야 함."
+    """
+    from agent.utils.korean_tokenizer import detect_polarity
+
+    polarity_tag = detect_polarity(question)
+    choice_str = " ".join(f"{k}) {v}" for k, v in choices.items())
+    # 사용자 정의 자연어 suffix
+    suffix = f" --- 위 질문은 [{polarity_tag}] 관련 법리적 판단을 요구함."
+
+    return f"{question} {choice_str}{suffix}"
