@@ -1,0 +1,42 @@
+serialization:
+  name: kv_pairs
+  method: kv_pairs
+  description: 가장 단순한 키-값 구조로 직렬화합니다.
+  exclude_fields:
+  - answer
+  - Human Accuracy
+retrieval:
+  method: rerank
+  top_k: 3
+  metric: IP
+  normalize_query: true
+  score_threshold:
+    value: 0.35
+  rerank:
+    retrieve_k: 10
+    final_k: 3
+    polarity_penalty: 0.08
+    bm25_aux_weight: 0.3
+    template_penalty: 0.0
+    template_overlap_threshold: 0.3
+prompt:
+  method: raw_stuffing
+  description: '원문 그대로 stuffing: retrieved chunks를 순서대로 그대로 붙여 전달 (baseline)'
+  exclude_fields:
+  - answer
+  - Human Accuracy
+query_representation:
+  method: question_plus_choices
+  description: 질문 텍스트 + 선택지 A~D를 결합하여 query 임베딩에 사용합니다.
+experiment_name: stage6__dense_rerank_polarity_bm25aux_f3
+output_dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+logging:
+  verbose_query: true
+  log_retrieved_contexts: true
+  max_logged_contexts: 3
+  full_question_text: true
+  only_log_errors_in_detail: false
+  show_answer_in_contexts: false
+  save_trace_file: true
+  trace_format: jsonl
+  trace_include_answer_debug: false

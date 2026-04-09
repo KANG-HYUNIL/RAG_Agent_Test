@@ -21,6 +21,7 @@ FAISS 기반 유사도 검색 및 Registry 패턴 기반 전략 관리.
 from . import (
     strategy_hybrid,
     strategy_mmr,
+    strategy_rerank,
     strategy_score_threshold,
     strategy_top_k,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "Retriever",
     "strategy_hybrid",
     "strategy_mmr",
+    "strategy_rerank",
     "strategy_score_threshold",
     "strategy_top_k",
 ]

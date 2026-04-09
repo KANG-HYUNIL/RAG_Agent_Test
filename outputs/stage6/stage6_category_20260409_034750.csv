@@ -1,0 +1,7 @@
+﻿실험명,비고,Law correct/total,Law accuracy(%),Criminal Law correct/total,Criminal Law accuracy(%)
+stage6__baseline_recheck,"stage5 최강 기준선 재확인 (재현성 검증, 보정 OFF)",132/230,57.39,11/29,37.93
+stage6__dense_rerank_polarity,polarity mismatch 후단 감점 — 부정/긍정 방향 오염 후보 제거,134/230,58.26,11/29,37.93
+stage6__dense_rerank_bm25aux,BM25 보조 신호 가산 — dense 후보 내 lexical overlap 재정렬,122/230,53.04,7/29,24.14
+stage6__dense_rerank_polarity_bm25aux,polarity penalty + BM25 aux 동시 적용 — 조합 효과 확인,122/230,53.04,8/29,27.59
+stage6__dense_rerank_polarity_bm25aux_f3,polarity + BM25 + final_k=3 — precision 집중 (top-3만 LLM 전달),126/230,54.78,10/29,34.48
+stage6__dense_rerank_template_penalty,OX/연결형 템플릿 과적합 감점 — 형식 유사 distractor 억제,131/230,56.96,10/29,34.48

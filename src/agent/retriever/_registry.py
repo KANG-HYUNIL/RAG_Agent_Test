@@ -50,6 +50,10 @@ class BaseRetrievalStrategy:
     def set_query_tokens(self, tokens: list[str]) -> None:
         """search() 직전에 query 토큰을 주입하는 hook. 기본 구현은 no-op."""
 
+    def set_query_text(self, text: str) -> None:
+        """search() 직전에 원본 query 텍스트를 주입하는 hook. 기본 구현은 no-op.
+        polarity/template 감지 등 원문이 필요한 전략에서 오버라이드합니다."""
+
     def search(
         self,
         index: _FaissIndex,

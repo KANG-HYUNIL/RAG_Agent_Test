@@ -1,0 +1,17 @@
+# rerank_polarity_bm25aux_f3.yaml
+# stage6__dense_rerank_polarity_bm25aux_f3 용
+# polarity + BM25 aux + final_k=3 — precision 집중 실험
+
+method: rerank
+top_k: 3
+metric: "IP"
+normalize_query: true
+score_threshold:
+  value: 0.35
+rerank:
+  retrieve_k: 10
+  final_k: 3
+  polarity_penalty: 0.08
+  bm25_aux_weight: 0.3
+  template_penalty: 0.0
+  template_overlap_threshold: 0.3

@@ -1,0 +1,7 @@
+﻿실험명,retrieval,query_repr,accuracy(%),correct/total,avg_time(s/q),status,비고
+stage6__baseline_recheck,rerank_base,question_plus_choices,55.21,143/259,1.388,COMPLETED,"stage5 최강 기준선 재확인 (재현성 검증, 보정 OFF)"
+stage6__dense_rerank_polarity,rerank_polarity,question_plus_choices,55.98,145/259,1.453,COMPLETED,polarity mismatch 후단 감점 — 부정/긍정 방향 오염 후보 제거
+stage6__dense_rerank_bm25aux,rerank_bm25aux,question_plus_choices,49.81,129/259,1.331,COMPLETED,BM25 보조 신호 가산 — dense 후보 내 lexical overlap 재정렬
+stage6__dense_rerank_polarity_bm25aux,rerank_polarity_bm25aux,question_plus_choices,50.19,130/259,1.254,COMPLETED,polarity penalty + BM25 aux 동시 적용 — 조합 효과 확인
+stage6__dense_rerank_polarity_bm25aux_f3,rerank_polarity_bm25aux_f3,question_plus_choices,52.51,136/259,1.087,COMPLETED,polarity + BM25 + final_k=3 — precision 집중 (top-3만 LLM 전달)
+stage6__dense_rerank_template_penalty,rerank_template,question_plus_choices,54.44,141/259,1.064,COMPLETED,OX/연결형 템플릿 과적합 감점 — 형식 유사 distractor 억제

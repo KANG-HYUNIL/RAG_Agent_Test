@@ -1,0 +1,17 @@
+# rerank_polarity.yaml
+# stage6__dense_rerank_polarity 용
+# polarity mismatch 후단 감점 — 부정/긍정 방향 오염 제거
+
+method: rerank
+top_k: 5
+metric: "IP"
+normalize_query: true
+score_threshold:
+  value: 0.35
+rerank:
+  retrieve_k: 10
+  final_k: 5
+  polarity_penalty: 0.08
+  bm25_aux_weight: 0.0
+  template_penalty: 0.0
+  template_overlap_threshold: 0.3

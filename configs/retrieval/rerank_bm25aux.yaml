@@ -1,0 +1,17 @@
+# rerank_bm25aux.yaml
+# stage6__dense_rerank_bm25aux 용
+# BM25 보조 신호 가산 — lexical overlap 보강, polarity 보정 없음
+
+method: rerank
+top_k: 5
+metric: "IP"
+normalize_query: true
+score_threshold:
+  value: 0.35
+rerank:
+  retrieve_k: 10
+  final_k: 5
+  polarity_penalty: 0.0
+  bm25_aux_weight: 0.3
+  template_penalty: 0.0
+  template_overlap_threshold: 0.3

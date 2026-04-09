@@ -1,0 +1,6 @@
+- serialization=kv_pairs
+- prompt=raw_stuffing
+- logging.save_trace_file=true
+- experiment_name=stage6__baseline_recheck
+- retrieval=rerank_base
+- query_representation=question_plus_choices

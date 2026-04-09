@@ -90,6 +90,8 @@ class Retriever:
             from agent.utils.korean_tokenizer import tokenize_korean
 
             self.strategy.set_query_tokens(tokenize_korean(query_text))
+            # 원문이 필요한 전략(rerank 등)을 위해 텍스트 자체도 전달
+            self.strategy.set_query_text(query_text)
 
         results = self.strategy.search(self.index, self.documents, query_np)
 

@@ -1,0 +1,17 @@
+# rerank_base.yaml
+# stage6__baseline_recheck 용 — 보정 기능 모두 OFF, score_threshold 동일 조건
+# stage5__baseline__dense_qpc 재현성 검증 목적
+
+method: rerank
+top_k: 5
+metric: "IP"
+normalize_query: true
+score_threshold:
+  value: 0.35
+rerank:
+  retrieve_k: 5       # final_k와 동일 → score_threshold와 동일 동작
+  final_k: 5
+  polarity_penalty: 0.0
+  bm25_aux_weight: 0.0
+  template_penalty: 0.0
+  template_overlap_threshold: 0.3

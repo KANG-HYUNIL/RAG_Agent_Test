@@ -1,0 +1,17 @@
+# rerank_template.yaml
+# stage6__dense_rerank_template_penalty 용
+# OX/연결형 템플릿 과적합 감점 — 형식 유사 distractor 제거
+
+method: rerank
+top_k: 5
+metric: "IP"
+normalize_query: true
+score_threshold:
+  value: 0.35
+rerank:
+  retrieve_k: 10
+  final_k: 5
+  polarity_penalty: 0.0
+  bm25_aux_weight: 0.0
+  template_penalty: 0.06
+  template_overlap_threshold: 0.3

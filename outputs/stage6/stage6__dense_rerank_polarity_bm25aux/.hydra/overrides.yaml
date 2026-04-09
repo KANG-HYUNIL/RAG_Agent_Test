@@ -1,0 +1,6 @@
+- serialization=kv_pairs
+- prompt=raw_stuffing
+- logging.save_trace_file=true
+- experiment_name=stage6__dense_rerank_polarity_bm25aux
+- retrieval=rerank_polarity_bm25aux
+- query_representation=question_plus_choices
